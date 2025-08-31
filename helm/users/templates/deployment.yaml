@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Values.image.name }}-api"
+  # namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: "{{ .Values.image.name }}-api"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Values.image.name }}-api"
+    spec:
+      containers:
+        - name: "{{ .Values.image.name }}-api"
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}

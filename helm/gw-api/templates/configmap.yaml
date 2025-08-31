@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gw-env-config
+  # namespace: {{ .Values.namespace }}
+data:
+  USERS_SERVICE_URL: {{ .Values.gateway.env.USERS_SERVICE_URL | quote }}
+  ORDERS_SERVICE_URL: {{ .Values.gateway.env.ORDERS_SERVICE_URL | quote }}

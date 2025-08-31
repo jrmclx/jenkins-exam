@@ -1,0 +1,18 @@
+# Default values for orders.
+
+replicaCount: 1
+
+imagePullSecrets:
+  - name: regcred
+
+image:
+  repository: registry.gitlab.com/jrmclx/exam_cloix_gitlab
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  name: "orders"
+
+service:
+    name: orders
+    type: ClusterIP
+    port: 80
+    targetPort: 8000

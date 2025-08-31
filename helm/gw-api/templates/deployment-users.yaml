@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-api
+  # namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.users.replicaCount }}
+  selector:
+    matchLabels:
+      app: users-api
+  template:
+    metadata:
+      labels:
+        app: users-api
+    spec:
+      containers:
+        - name: users-api
+          image: "{{ .Values.image.repository }}/{{ .Values.users.imageName }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.users.service.targetPort }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}

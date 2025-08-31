@@ -1,0 +1,41 @@
+# Default values for gw-api.
+replicaCount: 1
+
+imagePullSecrets:
+  - name: regcred
+
+image:
+  repository: registry.gitlab.com/jrmclx/exam_cloix_gitlab
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Default values for Users service.
+users:
+  replicaCount: 1
+  imageName: "users"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+
+# Default values for Orders service.
+orders:
+  replicaCount: 1
+  imageName: "orders"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+
+# Default values for Gateway service.
+gateway:
+  replicaCount: 1
+  imageName: "gateway"
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 8000
+    nodePort: 30000
+  env:
+    USERS_SERVICE_URL: "http://users"
+    ORDERS_SERVICE_URL: "http://orders"

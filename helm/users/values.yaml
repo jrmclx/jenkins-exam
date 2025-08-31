@@ -1,0 +1,18 @@
+# Default values for users.
+
+replicaCount: 1
+
+imagePullSecrets:
+  - name: regcred
+
+image:
+  repository: registry.gitlab.com/jrmclx/exam_cloix_gitlab
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  name: "users"
+
+service:
+    name: users
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
