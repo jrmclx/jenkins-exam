@@ -24,7 +24,7 @@ metadata:
   labels:
     app: movie-pgsql
 spec:
-  clusterIP: none
+  clusterIP: None
   selector:
     app: movie-pgsql
   ports:

@@ -24,7 +24,7 @@ metadata:
   labels:
     app: cast-pgsql
 spec:
-  clusterIP: none
+  clusterIP: None
   selector:
     app: cast-pgsql
   ports:
