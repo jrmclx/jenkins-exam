@@ -1,0 +1,26 @@
+# Default values for fastapi.
+
+app:
+  name: fastapi
+
+replicaCount: 1
+
+imagePullSecrets:
+  - name: regcred
+
+image:
+  # repository: registry.gitlab.com/jrmclx/jenkins-exam/movie-api
+  tag: "latest"
+  pullPolicy: Always
+  
+service:
+  # name: fastapi-service
+  type: NodePort
+  port: 80
+  targetPort: 8000
+  # nodePort: 30001
+  
+secret:
+  stringData:
+    # DATABASE_URI: postgresql://db_username:db_password@db-service/movie_db_dev
+    # CAST_SERVICE_HOST_URL: http://cast-service:80/api/v1/casts/

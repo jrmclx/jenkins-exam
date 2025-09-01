@@ -1,0 +1,27 @@
+# Default values for cast.
+
+app:
+  name: cast-pgsql
+
+# replicaCount: 1
+
+image:
+  # repository: postgres
+  tag: "12.1-alpine"
+  # pullPolicy: Always
+  
+service:
+  name: cast-db
+  # port: 5432
+  
+secret:
+  stringData:
+    POSTGRES_USER: cast_db_username
+    POSTGRES_PASSWORD: cast_db_password
+    POSTGRES_DB: cast_db_dev
+
+pvc:
+  - name: cast-pg-data
+    # mountPath: /var/lib/postgresql/data
+    # accessModes: ReadWriteOnce
+    # storage: 1Gi

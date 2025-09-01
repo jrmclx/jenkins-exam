@@ -1,0 +1,25 @@
+# Default values for cast.
+
+app:
+  name: cast-api
+
+# replicaCount: 1
+
+# imagePullSecrets:
+#   - name: regcred
+
+image:
+  repository: registry.gitlab.com/jrmclx/jenkins-exam/cast-api
+  # tag: "latest"
+  # pullPolicy: Always
+  
+service:
+  name: cast-service
+  # type: NodePort
+  # port: 80
+  # targetPort: 8000
+  nodePort: 30002
+  
+secret:
+  stringData:
+    DATABASE_URI: postgresql://cast_db_username:cast_db_password@cast-db/cast_db_dev

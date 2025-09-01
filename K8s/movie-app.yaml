@@ -37,7 +37,7 @@ metadata:
   namespace: dev
 stringData:
   DATABASE_URI: postgresql://movie_db_username:movie_db_password@movie-db/movie_db_dev
-  CAST_SERVICE_HOST_URL: http://cast_service:8000/api/v1/casts/
+  CAST_SERVICE_HOST_URL: http://cast-service:80/api/v1/casts/
 ---
 
 # -----------------------

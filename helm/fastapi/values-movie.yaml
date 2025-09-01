@@ -1,0 +1,26 @@
+# Default values for movie.
+
+app:
+  name: movie-api
+
+# replicaCount: 1
+
+# imagePullSecrets:
+#   - name: regcred
+
+image:
+  repository: registry.gitlab.com/jrmclx/jenkins-exam/movie-api
+  # tag: "latest"
+  # pullPolicy: Always
+  
+service:
+  name: movie-service
+  # type: NodePort
+  # port: 80
+  # targetPort: 8000
+  nodePort: 30001
+  
+secret:
+  stringData:
+    DATABASE_URI: postgresql://movie_db_username:movie_db_password@movie-db/movie_db_dev
+    CAST_SERVICE_HOST_URL: http://cast-service:80/api/v1/casts/
