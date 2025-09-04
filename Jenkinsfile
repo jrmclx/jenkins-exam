@@ -60,7 +60,7 @@ stages {
 stage('Deploiement en dev'){
         environment
         {
-        KUBECONFIG = credentials("kubeconfig") // we retrieve  kubeconfig from secret file called config saved on jenkins
+        KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file called 'kubeconfig'
         }
             steps {
                 script {

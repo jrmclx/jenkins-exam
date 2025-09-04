@@ -23,16 +23,76 @@ spec:
 # -----------------------
 #  Nginx ConfigMap(s)
 # -----------------------
-# Pour permettre la mise à jour de la conf depuis le repo de code, on crée le ConfigMap à partir du fichier local
-# kubectl create configmap nginx-conf ne peut pas être appliqué si le ConfigMap existe déjà
-# on utilise alors une astuce avec --dry-run=client et -o yaml pour générer le manifeste
-# puis l'appliquer avec kubectl apply -f -
+# Pour permettre la mise à jour de la conf via un pipeline CI/CD, on peut créer les ConfigMaps à partir des fichiers de conf sur le Repo Git
+# Néanmoins, "kubectl create configmap <cm_name>" ne peut pas être employé lorsque le ConfigMap existe déjà
+# on utilise alors une astuce avec "--dry-run=client" et "-o yaml" pour générer le manifeste YAML avant de le passer (pipe) à kubectl apply -f -
 
-#  --dry-run=client -o yaml → génère le YAML sans le créer
-#  | kubectl apply -f - → applique la mise à jour sur le ConfigMap existant
+  #  --dry-run=client -o yaml → génère le YAML sans le créer
+  #  | kubectl apply -f - → applique la mise à jour sur le ConfigMap existant
     
-  # kubectl create configmap nginx-conf --from-file=default.conf=nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
-  # kubectl create configmap nginx-index --from-file=index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
+# kubectl create configmap nginx-conf --from-file=default.conf=nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
+# kubectl create configmap nginx-index --from-file=index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: dev
+data:
+  default.conf: |-
+    server {
+      listen 8080;
+
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location /api/v1/movies {
+        proxy_pass http://movie-service:80/api/v1/movies;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+      }
+
+      location /api/v1/casts {
+        proxy_pass http://cast-service:80/api/v1/casts;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+      }
+
+    }
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-index
+  namespace: dev
+data:
+  index.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Jenkins Exam Web Frontend</title>
+    <style>
+    html {
+        color-scheme: light dark;
+    }
+    body {
+        width: 35em; margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+        text-align: center;
+    }
+    </style>
+    </head>
+    <body>
+    <h1>Jenkins Exam Web Frontend</h1>
+    <p>The nginx web server is successfully running.</p>
+
+    <p><a href="./api/v1/movies/docs">Movies API (Swagger)</a>.</p>
+    <p><a href="./api/v1/casts/docs">Casts API (Swagger)</a>.</p>
+
+    </body>
+    </html>
+---
 
 # -----------------------
 #  Nginx Deployment

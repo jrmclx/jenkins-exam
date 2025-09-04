@@ -3,23 +3,25 @@
 app:
   name: cast-api
 
-# replicaCount: 1
+replicaCount: 1
 
-# imagePullSecrets:
-#   - name: regcred
+imagePullSecrets:
+  - name: regcred
 
 image:
   repository: registry.gitlab.com/jrmclx/jenkins-exam/cast-api
-  # tag: "latest"
-  # pullPolicy: Always
+  tag: "latest"
+  pullPolicy: Always
   
 service:
   name: cast-service
-  # type: NodePort
-  # port: 80
-  # targetPort: 8000
+  type: NodePort
+  port: 80
+  targetPort: 8000
   nodePort: 30002
-  
+
+# Pour des raisons de sécurité, il est préférable de ne pas exposer les credentials dans les fichiers de configuration.
+# Les credentials affichés en clair dans l'URL sont fournis à titre d'exemple uniquement et peuvent être remplacées lors du déploiement avec Helm. 
 secret:
   stringData:
     DATABASE_URI: postgresql://cast_db_username:cast_db_password@cast-db/cast_db_dev

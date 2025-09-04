@@ -17,6 +17,10 @@ service:
   targetPort: 8080
   nodePort: 30000
 
+# Create ConfigMaps from local files and apply to the cluster before running helm install/upgrade
+  # kubectl create configmap nginx-conf --from-file=default.conf=nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
+  # kubectl create configmap nginx-index --from-file=index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
+
 configmaps:
   - name: nginx-conf
     items:

@@ -3,17 +3,19 @@
 app:
   name: cast-pgsql
 
-# replicaCount: 1
+replicaCount: 1
 
 image:
-  # repository: postgres
+  repository: postgres
   tag: "12.1-alpine"
-  # pullPolicy: Always
+  pullPolicy: Always
   
 service:
   name: cast-db
-  # port: 5432
-  
+  port: 5432
+
+# Pour des raisons de sécurité, il est préférable de ne pas exposer les credentials dans les fichiers de configuration.
+# Les valeurs ci-dessous sont fournies à titre d'exemple uniquement et peuvent être remplacées lors du déploiement avec Helm.  
 secret:
   stringData:
     POSTGRES_USER: cast_db_username
@@ -22,6 +24,6 @@ secret:
 
 pvc:
   - name: cast-pg-data
-    # mountPath: /var/lib/postgresql/data
-    # accessModes: ReadWriteOnce
-    # storage: 1Gi
+    mountPath: /var/lib/postgresql/data
+    accessModes: ReadWriteOnce
+    storage: 1Gi
