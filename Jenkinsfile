@@ -98,7 +98,7 @@ pipeline {
                             steps{    
                                 script { //Build Cast API Image
                                     sh '''
-                                    echo "Building cast-api image..."
+                                    echo "Building $CAST_IMAGE image..."
                                     docker build -t $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG ./cast-service
                                     sleep 3
                                     '''
@@ -155,7 +155,7 @@ pipeline {
                             }
                         }
                     
-                        stage('Pushing movie-api image'){
+                        stage('Pushing cast-api image'){
                             steps{
                                 
                                 script { //Push Movie API Image to Registry
@@ -182,7 +182,6 @@ pipeline {
                     sh '''
                     rm -Rf .kube
                     mkdir .kube
-                    ls
                     cat $KUBECONFIG > .kube/config
                     '''
                 }
@@ -193,10 +192,10 @@ pipeline {
                     sh 'helm upgrade --install cast-db ./helm/pgsql/ --values=./helm/pgsql/values-cast.yaml --namespace dev'
                 }
                 script { // Deploy movie-api (FastAPI) with Helm
-                    sh 'helm upgrade --install movie-api ./helm/fastapi/ --values=./helm/pgsql/values-movie.yaml --namespace dev'
+                    sh 'helm upgrade --install movie-api ./helm/fastapi/ --values=./helm/fastapi/values-movie.yaml --namespace dev'
                 }
                 script { // Deploy cast-api (FastAPI) with Helm
-                    sh 'helm upgrade --install cast-api ./helm/fastapi/ --values=./helm/pgsql/values-cast.yaml --namespace dev'
+                    sh 'helm upgrade --install cast-api ./helm/fastapi/ --values=./helm/fastapi/values-cast.yaml --namespace dev'
                 }
                 script { // Deploy web frontend (Nginx) with Helm
                     sh 'helm upgrade --install web-frontend ./helm/nginx/ --values=./helm/nginx/values.yaml --namespace dev'
