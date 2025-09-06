@@ -127,7 +127,7 @@ pipeline {
                         script { //Run Cast API Image
                             sh '''
                             docker rm -f $CAST_IMAGE || true
-                            docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@dummy-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                            docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@cast-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
                             sleep 8
                             '''
                         }
