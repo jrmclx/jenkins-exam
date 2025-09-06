@@ -178,7 +178,7 @@ pipeline {
                 }
             }
         }
-
+        // DEPLOYMENT STAGES ------------------------------------------------------------------------
         stage('Helm Deployment'){
             environment{
                 KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
@@ -219,13 +219,13 @@ pipeline {
                             // }
                             steps {
 
-                                script { // install or refresh kubeconfig file
-                                    sh '''
-                                    rm -Rf .kube
-                                    mkdir .kube
-                                    cat $KUBECONFIG > .kube/config
-                                    '''
-                                }
+                                // script { // install or refresh kubeconfig file
+                                //     sh '''
+                                //     rm -Rf .kube
+                                //     mkdir .kube
+                                //     cat $KUBECONFIG > .kube/config
+                                //     '''
+                                // }
                      
                                 script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
@@ -255,13 +255,13 @@ pipeline {
                             // }
                             steps {
 
-                                script { // install or refresh kubeconfig file
-                                    sh '''
-                                    rm -Rf .kube
-                                    mkdir .kube
-                                    cat $KUBECONFIG > .kube/config
-                                    '''
-                                }
+                                // script { // install or refresh kubeconfig file
+                                //     sh '''
+                                //     rm -Rf .kube
+                                //     mkdir .kube
+                                //     cat $KUBECONFIG > .kube/config
+                                //     '''
+                                // }
 
                                 script { // Deploy movie-api (FastAPI) with Helm
                                     sh '''
