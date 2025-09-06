@@ -218,15 +218,15 @@ pipeline {
                             //     changeset "**/helm/pgsql/**"
                             // }
                             steps {
-                                steps {
-                                    script { // install or refresh kubeconfig file
-                                        sh '''
-                                        rm -Rf .kube
-                                        mkdir .kube
-                                        cat $KUBECONFIG > .kube/config
-                                        '''
-                                    }
-                                }                        
+
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+                     
                                 script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
                                     helm upgrade --install movie-db ./helm/pgsql/ \
@@ -236,6 +236,7 @@ pipeline {
                                     --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS
                                     '''
                                 }
+
                                 script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
                                     helm upgrade --install cast-db ./helm/pgsql/ \
@@ -253,15 +254,15 @@ pipeline {
                             //     changeset "**/movie-service/**"
                             // }
                             steps {
-                                steps {
-                                    script { // install or refresh kubeconfig file
-                                        sh '''
-                                        rm -Rf .kube
-                                        mkdir .kube
-                                        cat $KUBECONFIG > .kube/config
-                                        '''
-                                    }
-                                } 
+
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+
                                 script { // Deploy movie-api (FastAPI) with Helm
                                     sh '''
                                     helm upgrade --install movie-api ./helm/fastapi/ \
