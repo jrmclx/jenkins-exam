@@ -184,11 +184,12 @@ pipeline {
                 KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
                 SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PWS
                 
-                MOVIE_SVC_NAME = "movie-service"
+                MOVIE_DB_SVC_NAME = "movie-db"
+                CAST_DB_SVC_NAME = "cast-db"
                 CAST_SVC_NAME = "cast-service"
 
-                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_SVC_NAME}/movie_db"
-                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_SVC_NAME}/cast_db"
+                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_DB_SVC_NAME}/movie_db"
+                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_DB_SVC_NAME}/cast_db"
             }
             stages { // remplace by parallel if you want to deploy envs in parallel
                 
