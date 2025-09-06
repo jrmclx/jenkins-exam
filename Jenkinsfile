@@ -126,7 +126,7 @@ pipeline {
                 script { // Deploy web frontend (Nginx) with Helm
                     sh 'helm upgrade --install web-frontend ./helm/nginx/ --values=./helm/nginx/values.yaml --namespace dev'
                 }
-        }
+            }
 
         // stage('Deploiement en staging'){
         //     environment{
@@ -171,6 +171,6 @@ pipeline {
         //         }
         //     }
 
-        // }
+        }
     }
 }
