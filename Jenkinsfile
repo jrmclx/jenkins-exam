@@ -1,7 +1,7 @@
 pipeline {
     environment { // environment variables
         REGISTRY_NAME = "registry.gitlab.com/jrmclx/jenkins-exam"
-        REGISTRY_USER = "jrmclx"
+        REGISTRY_USER = "jrmclx" //clear text for the exercise, but should be stored in Jenkins secret text in a real world scenario
         MOVIE_IMAGE = "movie-api"
         CAST_IMAGE = "cast-api"
         DOCKER_TAG = "v${BUILD_ID}.0" // we will tag our images with the current build in order to increment the value by 1 with each new build
@@ -13,7 +13,7 @@ pipeline {
                 REGISTRY_PASS = credentials("registry-token") // we retrieve registry token from Jenkins secret text
             }
             parallel {
-                stage('MOVIE Prep') {
+                stage('Movie image') {
                     when { // run this stage only if there are changes in the movie-service directory
                         changeset "**/movie-service/**"
                     }
@@ -94,7 +94,7 @@ pipeline {
                     }
                 }
 
-                stage('CAST Image Prep') {
+                stage('Cast image') {
                     when { // run this stage only if there are changes in the cast-service directory
                         changeset "**/cast-service/**"
                     }
@@ -179,13 +179,22 @@ pipeline {
             }
         }
 
-        stage('Deploiement en dev'){
-            environment{
-                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-            }
-            stages {
+        stage('Helm Deployment'){
+            stages { // remplace by parallel if you want to deploy envs in parallel
+                
+                // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
+                // In a real world scenario with multiple agents, we should import kubeconfig in each stage
+                stage('Import Kubeconfig'){ 
+                    environment{
+                        KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
+                        SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PWS
+                        
+                        MOVIE_SVC_NAME = "movie-service"
+                        CAST_SVC_NAME = "cast-service"
 
-                stage('Import Kubeconfig'){
+                        MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_SVC_NAME}/movie_db"
+                        CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_SVC_NAME}/cast_db"
+                    }
                     steps {
                         script { // install or refresh kubeconfig file
                             sh '''
@@ -197,52 +206,93 @@ pipeline {
                     }
                 }
 
-                stage('Deploy movie-db'){
-                    when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                        changeset "**/helm/pgsql/**"
+                stage('Deploy dev'){
+                    environment{
+                        NAMESPACE = "dev"
                     }
-                    steps {                        
-                        script { // Deploy movie-db (PostgreSQL) with Helm
-                            sh 'helm upgrade --install movie-db ./helm/pgsql/ --values=./helm/pgsql/values-movie.yaml --namespace dev'
-                        }
-                        script { // Deploy cast-db (PostgreSQL) with Helm
-                            sh 'helm upgrade --install cast-db ./helm/pgsql/ --values=./helm/pgsql/values-cast.yaml --namespace dev'                   
-                        }
-                    }
-                }
+                    stages {
 
-                stage('Deploy movie-api'){
-                    when { // update deployment only if there are changes in the movie-service directory
-                        changeset "**/movie-service/**"
-                    }
-                    steps {
-                        script { // Deploy movie-api (FastAPI) with Helm
-                            sh 'helm upgrade --install movie-api ./helm/fastapi/ --values=./helm/fastapi/values-movie.yaml --namespace dev'
+                        stage('Deploy movie-db'){
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
+                            steps {                        
+                                script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install movie-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-movie.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS
+                                    '''
+                                }
+                                script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install cast-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-cast.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS
+                                    '''
+                                }
+                            }
                         }
-                    }
-                }
 
-                stage('Deploy cast-api'){
-                    when { // update deployment only if there are changes in the cast-service directory
-                        changeset "**/cast-service/**"
-                    }
-                    steps {
-                        script { // Deploy cast-api (FastAPI) with Helm
-                            sh 'helm upgrade --install cast-api ./helm/fastapi/ --values=./helm/fastapi/values-cast.yaml --namespace dev'
+                        stage('Deploy movie-api'){
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
+                            steps {
+                                script { // Deploy movie-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install movie-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-movie.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$MOVIE_DB_URI \
+                                    --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
+                                    '''
+                                }
+                            }
                         }
-                    }
-                }
-                
-                stage('Deploy web-frontend'){
-                    when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                        anyOf {
-                            changeset "**/helm/nginx/**"
-                            changeset "**/nginx/**"
+
+                        stage('Deploy cast-api'){
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
+                            steps {
+                                script { // Deploy cast-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install cast-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-cast.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$CAST_DB_URI
+                                    '''
+                                }
+                            }
                         }
-                    }
-                    steps {
-                        script { // Deploy web frontend (Nginx) with Helm
-                            sh 'helm upgrade --install web-frontend ./helm/nginx/ --values=./helm/nginx/values.yaml --namespace dev'
+                        
+                        stage('Deploy web-frontend'){
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
+                            steps {
+                                script { // Update configMaps storing Nginx conf and index files
+                                    sh '''
+                                    kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    '''
+                                }
+                                script { // Deploy web frontend (Nginx) with Helm
+                                    sh '''
+                                    helm upgrade --install web-frontend ./helm/nginx/ \
+                                    --values=./helm/nginx/values.yaml \
+                                    --namespace $NAMESPACE --create-namespace
+                                    '''
+                                }
+                            }
                         }
                     }
                 }
