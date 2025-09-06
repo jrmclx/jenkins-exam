@@ -30,8 +30,8 @@ spec:
   #  --dry-run=client -o yaml → génère le YAML sans le créer
   #  | kubectl apply -f - → applique la mise à jour sur le ConfigMap existant
     
-# kubectl create configmap nginx-conf --from-file=default.conf=nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
-# kubectl create configmap nginx-index --from-file=index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
+# kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
+# kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
 
 apiVersion: v1
 kind: ConfigMap
