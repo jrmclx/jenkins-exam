@@ -14,43 +14,88 @@ pipeline {
             }
             parallel {
                 stage('MOVIE Image Prep') {
-                    steps {
-                        echo "Building ${MOVIE_IMAGE} image..."
-                        script { //Build Movie API Image
-                            sh '''
-                            docker build -t $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG ./movie-service
-                            sleep 3
-                            '''
+                    stages {
+                        
+                        stage('Building ${MOVIE_IMAGE} image'){
+                            steps{
+                                echo "Building ${MOVIE_IMAGE} image..."
+                                script { //Build Movie API Image
+                                    sh '''
+                                    docker build -t $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG ./movie-service
+                                    sleep 3
+                                    '''
+                                }
+                            }
                         }
-                        echo "Running ${MOVIE_IMAGE} image..."
-                        script { //Run Movie API Image
-                            sh '''
-                            docker rm -f $MOVIE_IMAGE || true
-                            docker run -d -p 8001:8000 --name $MOVIE_IMAGE $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
-                            sleep 8
-                            '''
+                        
+                        stage('Running ${MOVIE_IMAGE} image'){
+                            steps{
+
+                                echo "Creating Docker Network movie-net..."
+                                script { //Docker Network for Movie and PgSQL communication
+                                    sh '''
+                                    docker network rm movie-net || true
+                                    docker network create movie-net
+                                    '''
+                                }
+
+                                echo "Running Postgre image..."
+                                script { //Run Dummy PgSQL
+                                    sh '''
+                                    docker rm -f movie-pgsql || true
+                                    docker run -d --name movie-pgsql --network test-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                                    sleep 8
+                                    '''
+                                }
+
+                                echo "Running ${MOVIE_IMAGE} image..."
+                                script { //Run Movie API Image
+                                    sh '''
+                                    docker rm -f $MOVIE_IMAGE || true
+                                    docker run -d -p 8001:8000 --name $MOVIE_IMAGE --network movie-net -e DATABASE_URI=postgresql://db_user:db_pass@movie-pgsql/test-db $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
+                                    sleep 3
+                                    '''
+                                }
+                            }
                         }
-                        echo "Testing ${MOVIE_IMAGE} image..."
-                        script { //Test Movie API Image
-                            sh '''
-                            curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8001/docs"
-                            sleep 3
-                            ''' 
+
+                        stage('Testing ${MOVIE_IMAGE} image'){
+                            steps{
+                                echo "Testing ${MOVIE_IMAGE} image..."
+                                script { //Test Movie API Image
+                                    sh '''
+                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8001/api/v1/movies/docs"
+                                    sleep 3
+                                    ''' 
+                                }
+                            }
                         }
-                        echo "Stopping ${MOVIE_IMAGE} image..."
-                        script { //Test Movie API Image
-                            sh '''
-                            docker stop $MOVIE_IMAGE
-                            sleep 3
-                            ''' 
+
+                        stage('Stopping ${MOVIE_IMAGE} image'){
+                            steps{
+                                echo "Stopping ${MOVIE_IMAGE} image..."
+                                script { //Stop containers
+                                    sh '''
+                                    docker stop $MOVIE_IMAGE
+                                    docker stop movie-pgsql
+                                    sleep 3
+                                    docker network rm movie-net
+                                    '''
+                                }
+                            }
                         }
-                        echo "Pushing ${MOVIE_IMAGE} image..."
-                        script { //Push Movie API Image to Registry
-                            sh '''
-                            echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                            docker tag $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$MOVIE_IMAGE:latest
-                            docker push $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
-                            '''
+                    
+                        stage('Pushing ${MOVIE_IMAGE} image'){
+                            steps{
+                                echo "Pushing ${MOVIE_IMAGE} image..."
+                                script { //Push Movie API Image to Registry
+                                    sh '''
+                                    echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
+                                    docker tag $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$MOVIE_IMAGE:latest
+                                    docker push $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
+                                    '''
+                                }
+                            }
                         }
                     }
                 }
@@ -63,18 +108,33 @@ pipeline {
                             sleep 3
                             '''
                         }
+                        echo "Creating Docker Network cast-net..."
+                        script { //Docker Network for Cast and PgSQL communication
+                            sh '''
+                            docker network rm cast-net || true
+                            docker network create cast-net
+                            '''
+                        }
+                        echo "Running Postgre image..."
+                        script { //Run Dummy PgSQL
+                            sh '''
+                            docker rm -f cast-pgsql || true
+                            docker run -d --name cast-pgsql --network cast-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                            sleep 8
+                            '''
+                        }
                         echo "Running ${CAST_IMAGE} image..."
                         script { //Run Cast API Image
                             sh '''
                             docker rm -f $CAST_IMAGE || true
-                            docker run -d -p 8002:8000 --name $CAST_IMAGE $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                            docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@dummy-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
                             sleep 8
                             '''
                         }
                         echo "Testing ${CAST_IMAGE} image..."
                         script { //Test Cast API Image
                             sh '''
-                            curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/docs"
+                            curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/api/v1/casts/docs"
                             sleep 3
                             ''' 
                         }
@@ -127,26 +187,6 @@ pipeline {
                     sh 'helm upgrade --install web-frontend ./helm/nginx/ --values=./helm/nginx/values.yaml --namespace dev'
                 }
             }
-
-        // stage('Deploiement en staging'){
-        //     environment{
-        //         KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-        //     }
-        //     steps {
-        //         script {
-        //             sh '''
-        //             rm -Rf .kube
-        //             mkdir .kube
-        //             ls
-        //             cat $KUBECONFIG > .kube/config
-        //             cp fastapi/values.yaml values.yml
-        //             cat values.yml
-        //             sed -i "s+tag.*+tag: ${DOCKER_TAG}+g" values.yml
-        //             helm upgrade --install app fastapi --values=values.yml --namespace staging
-        //             '''
-        //         }
-        //     }
-        // }
 
         // stage('Deploiement en prod'){
         //     environment{
