@@ -214,9 +214,9 @@ pipeline {
                     stages {
 
                         stage('Deploy movie-db'){
-                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                                changeset "**/helm/pgsql/**"
-                            }
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
                             steps {
                                 steps {
                                     script { // install or refresh kubeconfig file
@@ -249,9 +249,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            when { // update deployment only if there are changes in the movie-service directory
-                                changeset "**/movie-service/**"
-                            }
+                            // when { // update deployment only if there are changes in the movie-service directory
+                            //     changeset "**/movie-service/**"
+                            // }
                             steps {
                                 steps {
                                     script { // install or refresh kubeconfig file
@@ -275,9 +275,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            when { // update deployment only if there are changes in the cast-service directory
-                                changeset "**/cast-service/**"
-                            }
+                            // when { // update deployment only if there are changes in the cast-service directory
+                            //     changeset "**/cast-service/**"
+                            // }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
                                     sh '''
@@ -291,12 +291,12 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                                anyOf {
-                                    changeset "**/helm/nginx/**"
-                                    changeset "**/nginx/**"
-                                }
-                            }
+                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                            //     anyOf {
+                            //         changeset "**/helm/nginx/**"
+                            //         changeset "**/nginx/**"
+                            //     }
+                            // }
                             steps {
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
