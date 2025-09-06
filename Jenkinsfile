@@ -14,6 +14,9 @@ pipeline {
             }
             parallel {
                 stage('MOVIE Prep') {
+                    when {
+                        changeset "**/movie-service/**"
+                    }
                     stages {
                         
                         stage('Building movie-api'){
@@ -92,6 +95,9 @@ pipeline {
                 }
 
                 stage('CAST Image Prep') {
+                    when {
+                        changeset "**/cast-service/**"
+                    }
                     stages{
                         
                         stage('Building cast-api'){
