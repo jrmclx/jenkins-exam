@@ -180,21 +180,22 @@ pipeline {
         }
 
         stage('Helm Deployment'){
+            environment{
+                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
+                SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PWS
+                
+                MOVIE_SVC_NAME = "movie-service"
+                CAST_SVC_NAME = "cast-service"
+
+                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_SVC_NAME}/movie_db"
+                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_SVC_NAME}/cast_db"
+            }
             stages { // remplace by parallel if you want to deploy envs in parallel
                 
                 // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
                 // In a real world scenario with multiple agents, we should import kubeconfig in each stage
                 stage('Import Kubeconfig'){ 
-                    environment{
-                        KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-                        SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PWS
-                        
-                        MOVIE_SVC_NAME = "movie-service"
-                        CAST_SVC_NAME = "cast-service"
 
-                        MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_SVC_NAME}/movie_db"
-                        CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_SVC_NAME}/cast_db"
-                    }
                     steps {
                         script { // install or refresh kubeconfig file
                             sh '''
@@ -216,7 +217,16 @@ pipeline {
                             when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                                 changeset "**/helm/pgsql/**"
                             }
-                            steps {                        
+                            steps {
+                                steps {
+                                    script { // install or refresh kubeconfig file
+                                        sh '''
+                                        rm -Rf .kube
+                                        mkdir .kube
+                                        cat $KUBECONFIG > .kube/config
+                                        '''
+                                    }
+                                }                        
                                 script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
                                     helm upgrade --install movie-db ./helm/pgsql/ \
@@ -243,6 +253,15 @@ pipeline {
                                 changeset "**/movie-service/**"
                             }
                             steps {
+                                steps {
+                                    script { // install or refresh kubeconfig file
+                                        sh '''
+                                        rm -Rf .kube
+                                        mkdir .kube
+                                        cat $KUBECONFIG > .kube/config
+                                        '''
+                                    }
+                                } 
                                 script { // Deploy movie-api (FastAPI) with Helm
                                     sh '''
                                     helm upgrade --install movie-api ./helm/fastapi/ \
