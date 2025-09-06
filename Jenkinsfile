@@ -182,14 +182,14 @@ pipeline {
         stage('Helm Deployment'){
             environment{
                 KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-                SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PWS
+                SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PSW
                 
                 MOVIE_DB_SVC_NAME = "movie-db"
                 CAST_DB_SVC_NAME = "cast-db"
                 CAST_SVC_NAME = "cast-service"
 
-                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${MOVIE_DB_SVC_NAME}/movie_db"
-                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PWS}@${CAST_DB_SVC_NAME}/cast_db"
+                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${MOVIE_DB_SVC_NAME}/movie_db"
+                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${CAST_DB_SVC_NAME}/cast_db"
             }
             stages { // remplace by parallel if you want to deploy envs in parallel
                 
@@ -234,7 +234,7 @@ pipeline {
                                     --values=./helm/pgsql/values-movie.yaml \
                                     --namespace $NAMESPACE --create-namespace \
                                     --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
-                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
                                     '''
                                 }
 
@@ -244,7 +244,7 @@ pipeline {
                                     --values=./helm/pgsql/values-cast.yaml \
                                     --namespace $NAMESPACE --create-namespace \
                                     --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
-                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
                                     '''
                                 }
                             }
