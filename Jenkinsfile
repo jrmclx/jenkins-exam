@@ -13,14 +13,14 @@ pipeline {
                 REGISTRY_PASS = credentials("registry-token") // we retrieve registry token from Jenkins secret text
             }
             parallel {
-                stage('MOVIE Image Prep') {
+                stage('MOVIE Prep') {
                     stages {
                         
-                        stage('Building ${MOVIE_IMAGE} image'){
+                        stage('Building movie-api'){
                             steps{
-                                echo "Building ${MOVIE_IMAGE} image..."
                                 script { //Build Movie API Image
                                     sh '''
+                                    echo "Building $MOVIE_IMAGE image..."
                                     docker build -t $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG ./movie-service
                                     sleep 3
                                     '''
@@ -28,70 +28,61 @@ pipeline {
                             }
                         }
                         
-                        stage('Running ${MOVIE_IMAGE} image'){
+                        stage('Run & Test movie-api'){
                             steps{
 
-                                echo "Creating Docker Network movie-net..."
                                 script { //Docker Network for Movie and PgSQL communication
                                     sh '''
+                                    echo "Creating Docker Network movie-net..."
                                     docker network rm movie-net || true
                                     docker network create movie-net
                                     '''
                                 }
-
-                                echo "Running Postgre image..."
+                                
                                 script { //Run Dummy PgSQL
                                     sh '''
+                                    echo "Running Postgre image..."
                                     docker rm -f movie-pgsql || true
-                                    docker run -d --name movie-pgsql --network test-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                                    docker run -d --name movie-pgsql --network movie-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
                                     sleep 8
                                     '''
                                 }
-
-                                echo "Running ${MOVIE_IMAGE} image..."
+                             
                                 script { //Run Movie API Image
                                     sh '''
+                                    echo "Running $MOVIE_IMAGE..."
                                     docker rm -f $MOVIE_IMAGE || true
                                     docker run -d -p 8001:8000 --name $MOVIE_IMAGE --network movie-net -e DATABASE_URI=postgresql://db_user:db_pass@movie-pgsql/test-db $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
-                                    sleep 3
+                                    sleep 5
                                     '''
                                 }
-                            }
-                        }
 
-                        stage('Testing ${MOVIE_IMAGE} image'){
-                            steps{
-                                echo "Testing ${MOVIE_IMAGE} image..."
                                 script { //Test Movie API Image
                                     sh '''
+                                    echo "Testing $MOVIE_IMAGE..."
                                     curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8001/api/v1/movies/docs"
                                     sleep 3
                                     ''' 
                                 }
-                            }
-                        }
 
-                        stage('Stopping ${MOVIE_IMAGE} image'){
-                            steps{
-                                echo "Stopping ${MOVIE_IMAGE} image..."
                                 script { //Stop containers
                                     sh '''
+                                    echo "Stopping containers..."
                                     docker stop $MOVIE_IMAGE
                                     docker stop movie-pgsql
                                     sleep 3
-                                    docker network rm movie-net
                                     '''
                                 }
                             }
                         }
                     
-                        stage('Pushing ${MOVIE_IMAGE} image'){
+                        stage('Pushing movie-api image'){
                             steps{
-                                echo "Pushing ${MOVIE_IMAGE} image..."
                                 script { //Push Movie API Image to Registry
                                     sh '''
-                                    echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
+                                    echo "Pushing $MOVIE_IMAGE image..."
                                     docker tag $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$MOVIE_IMAGE:latest
+                                    echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin                                    
                                     docker push $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
                                     '''
                                 }
@@ -99,59 +90,83 @@ pipeline {
                         }
                     }
                 }
+
                 stage('CAST Image Prep') {
-                    steps {
-                        echo "Building ${CAST_IMAGE} image..."
-                        script { //Build Cast API Image
-                            sh '''
-                            docker build -t $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG ./cast-service
-                            sleep 3
-                            '''
+                    stages{
+                        
+                        stage('Building cast-api'){
+                            steps{    
+                                script { //Build Cast API Image
+                                    sh '''
+                                    echo "Building cast-api image..."
+                                    docker build -t $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG ./cast-service
+                                    sleep 3
+                                    '''
+                                }
+                            }
                         }
-                        echo "Creating Docker Network cast-net..."
-                        script { //Docker Network for Cast and PgSQL communication
-                            sh '''
-                            docker network rm cast-net || true
-                            docker network create cast-net
-                            '''
+                        
+                        stage('Run & Test cast-api'){
+                            steps{
+
+                                script { //Docker Network for Movie and PgSQL communication
+                                    sh '''
+                                    echo "Creating Docker Network cast-net..."
+                                    docker network rm cast-net || true
+                                    docker network create cast-net
+                                    '''
+                                }
+                                
+                                
+                                script { //Run Dummy PgSQL
+                                    sh '''
+                                    echo "Running Postgre image..."
+                                    docker rm -f cast-pgsql || true
+                                    docker run -d --name cast-pgsql --network cast-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                                    sleep 8
+                                    '''
+                                }
+                             
+                                script { //Run Movie API Image
+                                    sh '''
+                                    echo "Running $CAST_IMAGE..."
+                                    docker rm -f $CAST_IMAGE || true
+                                    docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@cast-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                                    sleep 5
+                                    '''
+                                }
+
+                                script { //Test Movie API Image
+                                    sh '''
+                                    echo "Testing $CAST_IMAGE..."
+                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/api/v1/casts/docs"
+                                    sleep 3
+                                    ''' 
+                                }
+
+                                script { //Stop containers
+                                    sh '''
+                                    echo "Stopping containers..."
+                                    docker stop $CAST_IMAGE
+                                    docker stop cast-pgsql
+                                    sleep 3
+                                    '''
+                                }
+                            }
                         }
-                        echo "Running Postgre image..."
-                        script { //Run Dummy PgSQL
-                            sh '''
-                            docker rm -f cast-pgsql || true
-                            docker run -d --name cast-pgsql --network cast-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
-                            sleep 8
-                            '''
-                        }
-                        echo "Running ${CAST_IMAGE} image..."
-                        script { //Run Cast API Image
-                            sh '''
-                            docker rm -f $CAST_IMAGE || true
-                            docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@cast-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
-                            sleep 8
-                            '''
-                        }
-                        echo "Testing ${CAST_IMAGE} image..."
-                        script { //Test Cast API Image
-                            sh '''
-                            curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/api/v1/casts/docs"
-                            sleep 3
-                            ''' 
-                        }
-                        echo "Stopping ${CAST_IMAGE} image..."
-                        script { //Test Cast API Image
-                            sh '''
-                            docker stop $CAST_IMAGE
-                            sleep 3
-                            ''' 
-                        }
-                        echo "Pushing ${CAST_IMAGE} image..."
-                        script { //Push Cast API Image to Registry
-                            sh '''
-                            echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                            docker tag $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$CAST_IMAGE:latest
-                            docker push $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
-                            '''
+                    
+                        stage('Pushing movie-api image'){
+                            steps{
+                                
+                                script { //Push Movie API Image to Registry
+                                    sh '''
+                                    echo "Pushing ${CAST_IMAGE} image..."
+                                    echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
+                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$CAST_IMAGE:latest
+                                    docker push $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                                    '''
+                                }
+                            }
                         }
                     }
                 }
