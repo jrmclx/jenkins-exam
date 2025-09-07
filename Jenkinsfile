@@ -637,14 +637,14 @@ pipeline {
                     //     branch pattern: ".*(master|main)", comparator: "REGEXP"
                     // }
 
-                    stage('Debug Branch') {
-                        steps {
-                            echo "BRANCH_NAME = ${env.BRANCH_NAME}"
-                            echo "GIT_BRANCH  = ${env.GIT_BRANCH}"
-                        }
-                    }
-
                     stages {
+
+                        stage('Debug Branch') {
+                            steps {
+                                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
+                                echo "GIT_BRANCH  = ${env.GIT_BRANCH}"
+                            }
+                        }
 
                         stage('Import Kubeconfig'){ 
                             steps {
