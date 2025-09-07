@@ -325,7 +325,6 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
