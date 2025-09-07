@@ -56,99 +56,99 @@ def helmDeploy(release, chart, valuesFile, namespace, extraArgs="") {
     """
 }
 
-def deployEnvironment(namespace, imageTag, nodeport) {
-    return {
-        stage("Deploy ${namespace}") {
-            environment {
-                NAMESPACE = namespace
-            }
-            stages {
-                stage('Import Kubeconfig') {
-                    steps {
-                        script { // install or refresh kubeconfig file
-                            sh '''
-                            rm -Rf .kube
-                            mkdir .kube
-                            cat $KUBECONFIG > .kube/config
-                            '''
-                        }
-                    }
-                }
+// def deployEnvironment(namespace, imageTag, nodeport) {
+//     return {
+//         stage("Deploy ${namespace}") {
+//             environment {
+//                 NAMESPACE = namespace
+//             }
+//             stages {
+//                 stage('Import Kubeconfig') {
+//                     steps {
+//                         script { // install or refresh kubeconfig file
+//                             sh '''
+//                             rm -Rf .kube
+//                             mkdir .kube
+//                             cat $KUBECONFIG > .kube/config
+//                             '''
+//                         }
+//                     }
+//                 }
 
-                stage('Deploy Movie DB') {
-                    when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                    steps {
-                        script {
-                            helmDeploy(
-                                "movie-db", "./helm/pgsql/", "./helm/pgsql/values-movie.yaml", namespace,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
-                            )
-                        }
-                    }
-                }
+//                 stage('Deploy Movie DB') {
+//                     when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
+//                     steps {
+//                         script {
+//                             helmDeploy(
+//                                 "movie-db", "./helm/pgsql/", "./helm/pgsql/values-movie.yaml", namespace,
+//                                 "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
+//                             )
+//                         }
+//                     }
+//                 }
 
-                stage('Deploy Cast DB') {
-                    when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                    steps {
-                        script {
-                            helmDeploy(
-                                "cast-db", "./helm/pgsql/", "./helm/pgsql/values-cast.yaml", namespace,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
-                            )
-                        }
-                    }
-                }
+//                 stage('Deploy Cast DB') {
+//                     when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
+//                     steps {
+//                         script {
+//                             helmDeploy(
+//                                 "cast-db", "./helm/pgsql/", "./helm/pgsql/values-cast.yaml", namespace,
+//                                 "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
+//                             )
+//                         }
+//                     }
+//                 }
 
-                stage('Deploy Movie API') {
-                    when { changeset "**/movie-service/**" } // update deployment only if there are changes in the movie-service directory
-                    steps {
-                        script {
-                            helmDeploy(
-                                "${MOVIE_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", namespace,
-                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
-                            )
-                        }
-                    }
-                }
+//                 stage('Deploy Movie API') {
+//                     when { changeset "**/movie-service/**" } // update deployment only if there are changes in the movie-service directory
+//                     steps {
+//                         script {
+//                             helmDeploy(
+//                                 "${MOVIE_PREFIX}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", namespace,
+//                                 "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
+//                             )
+//                         }
+//                     }
+//                 }
 
-                stage('Deploy Cast API') {
-                    when { changeset "**/cast-service/**" } // update deployment only if there are changes in the cast-service directory
-                    steps {
-                        script {
-                            helmDeploy(
-                                "${CAST_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", namespace,
-                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
-                            )
-                        }
-                    }
-                }
+//                 stage('Deploy Cast API') {
+//                     when { changeset "**/cast-service/**" } // update deployment only if there are changes in the cast-service directory
+//                     steps {
+//                         script {
+//                             helmDeploy(
+//                                 "${CAST_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", namespace,
+//                                 "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
+//                             )
+//                         }
+//                     }
+//                 }
 
-                stage('Deploy web-frontend'){
-                    when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                        anyOf {
-                            changeset "**/helm/nginx/**"
-                            changeset "**/nginx/**"
-                        }
-                    }
-                    steps {
-                        script { // Update configMaps storing Nginx conf and index files
-                                sh '''
-                                kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
-                                kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
-                                '''
-                        }
-                        script { // Deploy or update Nginx deployment
-                            helmDeploy(
-                                "web-frontend", "./helm/nginx/", "./helm/nginx/values.yaml", namespace,
-                                "--set service.nodePort=${nodeport}"
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+//                 stage('Deploy web-frontend'){
+//                     when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+//                         anyOf {
+//                             changeset "**/helm/nginx/**"
+//                             changeset "**/nginx/**"
+//                         }
+//                     }
+//                     steps {
+//                         script { // Update configMaps storing Nginx conf and index files
+//                                 sh '''
+//                                 kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+//                                 kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+//                                 '''
+//                         }
+//                         script { // Deploy or update Nginx deployment
+//                             helmDeploy(
+//                                 "web-frontend", "./helm/nginx/", "./helm/nginx/values.yaml", namespace,
+//                                 "--set service.nodePort=${nodeport}"
+//                             )
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
 
 // === PIPELINE ===============================================================
@@ -238,7 +238,7 @@ pipeline {
                     steps {
                         script {
                             helmDeploy(
-                                "${MOVIE_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", env.NAMESPACE,
+                                "${MOVIE_PREFIX}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", env.NAMESPACE,
                                 "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
                             )
                         }
@@ -249,7 +249,7 @@ pipeline {
                     steps {
                         script {
                             helmDeploy(
-                                "${CAST_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", env.NAMESPACE,
+                                "${CAST_PREFIX}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", env.NAMESPACE,
                                 "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
                             )
                         }
