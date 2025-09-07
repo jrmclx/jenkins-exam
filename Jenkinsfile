@@ -340,12 +340,14 @@ pipeline {
                                 }
                             }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
@@ -472,12 +474,14 @@ pipeline {
                                 }
                             }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+                                
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
@@ -597,13 +601,14 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            steps {
-                                when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                                    anyOf {
-                                        changeset "**/helm/nginx/**"
-                                        changeset "**/nginx/**"
-                                    }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
                                 }
+                            }
+                            steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
@@ -746,12 +751,14 @@ pipeline {
                                 }
                             }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
