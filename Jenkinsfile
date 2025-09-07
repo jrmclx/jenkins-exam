@@ -632,9 +632,16 @@ pipeline {
                     environment{
                         NAMESPACE = "prod"
                         NODEPORT = "$NODEPORT_PROD"
-                    }
-                    when { // deploy to production only if there are changes in Master branch
-                        branch pattern: ".*(master|main)", comparator: "REGEXP"
+                    // }
+                    // when { // deploy to production only if there are changes in Master branch
+                    //     branch pattern: ".*(master|main)", comparator: "REGEXP"
+                    // }
+
+                    stage('Debug Branch') {
+                        steps {
+                            echo "BRANCH_NAME = ${env.BRANCH_NAME}"
+                            echo "GIT_BRANCH  = ${env.GIT_BRANCH}"
+                        }
                     }
 
                     stages {
