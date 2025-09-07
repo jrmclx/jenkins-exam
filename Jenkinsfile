@@ -200,14 +200,14 @@ pipeline {
         // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
         // In a real world scenario with multiple agents, we should import kubeconfig in each stage
         stage('Import Kubeconfig'){ 
-            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                anyOf {
-                    changeset "**/helm/**"
-                    changeset "**/nginx/**"
-                    changeset "**/movie-service/**"
-                    changeset "**/cast-service/**"
-                }
-            }
+            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+            //     anyOf {
+            //         changeset "**/helm/**"
+            //         changeset "**/nginx/**"
+            //         changeset "**/movie-service/**"
+            //         changeset "**/cast-service/**"
+            //     }
+            // }
             environment{
                 KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
             }
