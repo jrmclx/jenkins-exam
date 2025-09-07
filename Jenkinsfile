@@ -164,10 +164,12 @@ pipeline {
         KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
 
         MOVIE_PREFIX   = "movie"
+        MOVIE_IMAGE = "${MOVIE_PREFIX}-api"
         MOVIE_SVC_DIR = "movie-service"
         MOVIE_SVC_NAME= "${MOVIE_PREFIX}-service"
 
         CAST_PREFIX   = "cast"
+        CAST_IMAGE = "${CAST_PREFIX}-api"
         CAST_SVC_DIR = "cast-service"
         CAST_SVC_NAME= "${CAST_PREFIX}-service"
 
@@ -238,7 +240,7 @@ pipeline {
                     steps {
                         script {
                             helmDeploy(
-                                "${MOVIE_PREFIX}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", env.NAMESPACE,
+                                "movie-api", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", env.NAMESPACE,
                                 "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
                             )
                         }
@@ -249,7 +251,7 @@ pipeline {
                     steps {
                         script {
                             helmDeploy(
-                                "${CAST_PREFIX}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", env.NAMESPACE,
+                                "cast-api", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", env.NAMESPACE,
                                 "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
                             )
                         }
