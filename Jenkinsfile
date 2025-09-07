@@ -303,7 +303,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -325,7 +325,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -437,7 +437,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -459,7 +459,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -481,7 +481,7 @@ pipeline {
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
-                                
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
@@ -571,7 +571,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -593,7 +593,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -714,7 +714,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -736,7 +736,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set image.tag $IMAGE_TAG \
+                                    --set image.tag "$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
