@@ -634,7 +634,7 @@ pipeline {
                         NODEPORT = "$NODEPORT_PROD"
                     }
                     when { // deploy to production only if there are changes in Master branch
-                        branch 'master'
+                        branch pattern: ".*(master|main)", comparator: "REGEXP"
                     }
 
                     stages {
