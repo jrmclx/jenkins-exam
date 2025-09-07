@@ -97,7 +97,7 @@ pipeline {
                                 script { //Push Movie API Image to Registry
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
-                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
+                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin                                    
                                     docker push $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     '''
@@ -185,7 +185,7 @@ pipeline {
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
+                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
                                     docker push $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG
                                     '''
                                 }
@@ -339,30 +339,354 @@ pipeline {
                         }
                     }
                 }
+                stage('Deploy qa'){
+                    environment{
+                        NAMESPACE = "qa"
+                    }
+                    stages {
+
+                        stage('Deploy movie-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                            }
+                            steps {
+                     
+                                script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+                        stage('Deploy cast-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$CAST_PREFIX"
+                            }
+                            steps {
+                                script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy movie-api'){
+                            // when { // update deployment only if there are changes in the movie-service directory
+                            //     changeset "**/movie-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+
+                                script { // Deploy movie-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI \
+                                    --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy cast-api'){
+                            // when { // update deployment only if there are changes in the cast-service directory
+                            //     changeset "**/cast-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+                                script { // Deploy cast-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI
+                                    '''
+                                }
+                            }
+                        }
+                        
+                        stage('Deploy web-frontend'){
+                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                            //     anyOf {
+                            //         changeset "**/helm/nginx/**"
+                            //         changeset "**/nginx/**"
+                            //     }
+                            // }
+                            steps {
+                                script { // Update configMaps storing Nginx conf and index files
+                                    sh '''
+                                    kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    '''
+                                }
+                                script { // Deploy web frontend (Nginx) with Helm
+                                    sh '''
+                                    helm upgrade --install web-frontend ./helm/nginx/ \
+                                    --values=./helm/nginx/values.yaml \
+                                    --namespace $NAMESPACE --create-namespace
+                                    '''
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Deploy stg'){
+                    environment{
+                        NAMESPACE = "staging"
+                    }
+                    stages {
+
+                        stage('Deploy movie-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                            }
+                            steps {
+                     
+                                script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+                        stage('Deploy cast-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$CAST_PREFIX"
+                            }
+                            steps {
+                                script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy movie-api'){
+                            // when { // update deployment only if there are changes in the movie-service directory
+                            //     changeset "**/movie-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+
+                                script { // Deploy movie-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI \
+                                    --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy cast-api'){
+                            // when { // update deployment only if there are changes in the cast-service directory
+                            //     changeset "**/cast-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+                                script { // Deploy cast-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI
+                                    '''
+                                }
+                            }
+                        }
+                        
+                        stage('Deploy web-frontend'){
+                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                            //     anyOf {
+                            //         changeset "**/helm/nginx/**"
+                            //         changeset "**/nginx/**"
+                            //     }
+                            // }
+                            steps {
+                                script { // Update configMaps storing Nginx conf and index files
+                                    sh '''
+                                    kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    '''
+                                }
+                                script { // Deploy web frontend (Nginx) with Helm
+                                    sh '''
+                                    helm upgrade --install web-frontend ./helm/nginx/ \
+                                    --values=./helm/nginx/values.yaml \
+                                    --namespace $NAMESPACE --create-namespace
+                                    '''
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Deploy prod'){
+                    environment{
+                        NAMESPACE = "prod"
+                    }
+                    stages {
+
+                        stage('Approval to deploy prod'){
+                            steps {
+                                timeout(time: 15, unit: "MINUTES") { // Button to approve deployment on production (15min timeout)
+                                    input message: 'Do you want to deploy in production ?', ok: 'Yes'
+                                }
+                            }
+                        }
+                        
+                        stage('Deploy movie-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                            }
+                            steps {
+                     
+                                script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+                        stage('Deploy cast-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = "$CAST_PREFIX"
+                            }
+                            steps {
+                                script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
+                                    --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy movie-api'){
+                            // when { // update deployment only if there are changes in the movie-service directory
+                            //     changeset "**/movie-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+
+                                script { // Deploy movie-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI \
+                                    --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Deploy cast-api'){
+                            // when { // update deployment only if there are changes in the cast-service directory
+                            //     changeset "**/cast-service/**"
+                            // }
+                            environment{
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
+                            }
+                            steps {
+                                script { // Deploy cast-api (FastAPI) with Helm
+                                    sh '''
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI
+                                    '''
+                                }
+                            }
+                        }
+                        
+                        stage('Deploy web-frontend'){
+                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                            //     anyOf {
+                            //         changeset "**/helm/nginx/**"
+                            //         changeset "**/nginx/**"
+                            //     }
+                            // }
+                            steps {
+                                script { // Update configMaps storing Nginx conf and index files
+                                    sh '''
+                                    kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
+                                    '''
+                                }
+                                script { // Deploy web frontend (Nginx) with Helm
+                                    sh '''
+                                    helm upgrade --install web-frontend ./helm/nginx/ \
+                                    --values=./helm/nginx/values.yaml \
+                                    --namespace $NAMESPACE --create-namespace
+                                    '''
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        // stage('Deploiement en prod'){
-        //     environment{
-        //         KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-        //     }
-        //     steps {
-        //         timeout(time: 15, unit: "MINUTES") { // Create an Approval Button with a timeout of 15minutes to approve deployment on production
-        //             input message: 'Do you want to deploy in production ?', ok: 'Yes'
-        //         }
-
-        //         script {
-        //         sh '''
-        //             rm -Rf .kube
-        //             mkdir .kube
-        //             ls
-        //             cat $KUBECONFIG > .kube/config
-        //             cp fastapi/values.yaml values.yml
-        //             cat values.yml
-        //             sed -i "s+tag.*+tag: ${IMAGE_TAG}+g" values.yml
-        //             helm upgrade --install app fastapi --values=values.yml --namespace prod
-        //             '''
-        //         }
-        //     }
-
         }
     }
 }
