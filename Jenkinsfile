@@ -315,8 +315,8 @@ pipeline {
                             //     changeset "**/cast-service/**"
                             // }
                             environment{
-                                PREFIX = "$MOVIE_PREFIX"
-                                DB_URI = "$MOVIE_DB_URI"
+                                PREFIX = "$CAST_PREFIX"
+                                DB_URI = "$CAST_DB_URI"
                             }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
@@ -445,8 +445,8 @@ pipeline {
                             //     changeset "**/cast-service/**"
                             // }
                             environment{
-                                PREFIX = "$MOVIE_PREFIX"
-                                DB_URI = "$MOVIE_DB_URI"
+                                PREFIX = "$CAST_PREFIX"
+                                DB_URI = "$CAST_DB_URI"
                             }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
@@ -575,8 +575,8 @@ pipeline {
                             //     changeset "**/cast-service/**"
                             // }
                             environment{
-                                PREFIX = "$MOVIE_PREFIX"
-                                DB_URI = "$MOVIE_DB_URI"
+                                PREFIX = "$CAST_PREFIX"
+                                DB_URI = "$CAST_DB_URI"
                             }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
@@ -709,8 +709,8 @@ pipeline {
                             //     changeset "**/cast-service/**"
                             // }
                             environment{
-                                PREFIX = "$MOVIE_PREFIX"
-                                DB_URI = "$MOVIE_DB_URI"
+                                PREFIX = "$CAST_PREFIX"
+                                DB_URI = "$CAST_DB_URI"
                             }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
