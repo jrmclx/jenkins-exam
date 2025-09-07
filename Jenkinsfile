@@ -13,6 +13,7 @@ pipeline {
         CAST_SVC_NAME = "${CAST_PREFIX}-service"
 
         IMAGE_TAG = "v${BUILD_ID}.0" // we will tag our images with the current build in order to increment the value by 1 with each new build
+
     }
     agent any // any available agent
     stages {
@@ -195,40 +196,55 @@ pipeline {
                 }
             }
         }
+
+        // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
+        // In a real world scenario with multiple agents, we should import kubeconfig in each stage
+        stage('Import Kubeconfig'){ 
+            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                anyOf {
+                    changeset "**/helm/**"
+                    changeset "**/nginx/**"
+                    changeset "**/movie-service/**"
+                    changeset "**/cast-service/**"
+                }
+            }
+            environment{
+                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
+            }
+            steps {
+                script { // install or refresh kubeconfig file
+                    sh '''
+                    rm -Rf .kube
+                    mkdir .kube
+                    cat $KUBECONFIG > .kube/config
+                    '''
+                }
+            }
+        }
+
         // DEPLOYMENT STAGES ------------------------------------------------------------------------
         stage('Deployment'){
             environment{
-                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
                 SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PSW
                 
                 MOVIE_DB_SVC = "${MOVIE_PREFIX}-db"
                 CAST_DB_SVC = "${CAST_PREFIX}-db"
-                // CAST_SVC_NAME = "cast-service"
 
                 MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${MOVIE_DB_SVC}/${MOVIE_PREFIX}_db"
                 CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${CAST_DB_SVC}/${CAST_PREFIX}_db"
+
+                NODEPORT_DEV = 30001
+                NODEPORT_QA = 30002
+                NODEPORT_STG = 30003
+                NODEPORT_PROD = 30000
             }
 
-            stages { // replace by parallel if you want to deploy envs in parallel
+            parallel { // replace by stages if you want a sequential deployment
                 
-                // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
-                // In a real world scenario with multiple agents, we should import kubeconfig in each stage
-                stage('Import Kubeconfig'){ 
-
-                    steps {
-                        script { // install or refresh kubeconfig file
-                            sh '''
-                            rm -Rf .kube
-                            mkdir .kube
-                            cat $KUBECONFIG > .kube/config
-                            '''
-                        }
-                    }
-                }
-
                 stage('Deploy dev'){
                     environment{
                         NAMESPACE = "dev"
+                        NODEPORT = "$NODEPORT_DEV"
                     }
                     stages {
 
@@ -332,7 +348,8 @@ pipeline {
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
                                     --values=./helm/nginx/values.yaml \
-                                    --namespace $NAMESPACE --create-namespace
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set service.nodePort=$NODEPORT
                                     '''
                                 }
                             }
@@ -342,6 +359,7 @@ pipeline {
                 stage('Deploy qa'){
                     environment{
                         NAMESPACE = "qa"
+                        NODEPORT = "$NODEPORT_QA"
                     }
                     stages {
 
@@ -445,7 +463,8 @@ pipeline {
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
                                     --values=./helm/nginx/values.yaml \
-                                    --namespace $NAMESPACE --create-namespace
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set service.nodePort=$NODEPORT
                                     '''
                                 }
                             }
@@ -455,6 +474,7 @@ pipeline {
                 stage('Deploy stg'){
                     environment{
                         NAMESPACE = "staging"
+                        NODEPORT = "$NODEPORT_STG"
                     }
                     stages {
 
@@ -558,7 +578,8 @@ pipeline {
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
                                     --values=./helm/nginx/values.yaml \
-                                    --namespace $NAMESPACE --create-namespace
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set service.nodePort=$NODEPORT
                                     '''
                                 }
                             }
@@ -568,6 +589,7 @@ pipeline {
                 stage('Deploy prod'){
                     environment{
                         NAMESPACE = "prod"
+                        NODEPORT = "$NODEPORT_PROD"
                     }
                     stages {
 
@@ -679,7 +701,8 @@ pipeline {
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
                                     --values=./helm/nginx/values.yaml \
-                                    --namespace $NAMESPACE --create-namespace
+                                    --namespace $NAMESPACE --create-namespace \
+                                    --set service.nodePort=$NODEPORT
                                     '''
                                 }
                             }
