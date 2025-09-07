@@ -2,9 +2,17 @@ pipeline {
     environment { // environment variables
         REGISTRY_NAME = "registry.gitlab.com/jrmclx/jenkins-exam"
         REGISTRY_USER = "jrmclx" //clear text for the exercise, but should be stored in Jenkins secret text in a real world scenario
-        MOVIE_IMAGE = "movie-api"
-        CAST_IMAGE = "cast-api"
-        DOCKER_TAG = "v${BUILD_ID}.0" // we will tag our images with the current build in order to increment the value by 1 with each new build
+
+        MOVIE_PREFIX = "movie"
+        CAST_PREFIX = "cast"
+
+        MOVIE_IMAGE = "${MOVIE_PREFIX}-api"
+        MOVIE_SVC_NAME = "${MOVIE_PREFIX}-service"
+
+        CAST_IMAGE = "${CAST_PREFIX}-api"
+        CAST_SVC_NAME = "${CAST_PREFIX}-service"
+
+        IMAGE_TAG = "v${BUILD_ID}.0" // we will tag our images with the current build in order to increment the value by 1 with each new build
     }
     agent any // any available agent
     stages {
@@ -14,56 +22,61 @@ pipeline {
             }
             parallel {
                 stage('Movie image') {
-                    when { // run this stage only if there are changes in the movie-service directory
-                        changeset "**/movie-service/**"
+                    // when { // run this stage only if there are changes in the movie-service directory
+                    //     changeset "**/movie-service/**"
+                    // }
+                    environment{
+                        IMAGE_NAME = $MOVIE_IMAGE
+                        SVC_NAME = $MOVIE_SVC_NAME
+                        PREFIX = $MOVIE_PREFIX
                     }
                     stages {
                         
-                        stage('Building movie-api'){
+                        stage('Build movie-api'){
                             steps{
                                 script { //Build Movie API Image
                                     sh '''
-                                    echo "Building $MOVIE_IMAGE image..."
-                                    docker build -t $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG ./movie-service
+                                    echo "Building $IMAGE_NAME image..."
+                                    docker build -t $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG ./$SVC_NAME
                                     sleep 3
                                     '''
                                 }
                             }
                         }
                         
-                        stage('Run & Test movie-api'){
+                        stage('Run/Test movie-api'){
                             steps{
 
                                 script { //Docker Network for Movie and PgSQL communication
                                     sh '''
-                                    echo "Creating Docker Network movie-net..."
-                                    docker network rm movie-net || true
-                                    docker network create movie-net
+                                    echo "Creating Docker Network ${PREFIX}-net..."
+                                    docker network rm ${PREFIX}-net || true
+                                    docker network create ${PREFIX}-net
                                     '''
                                 }
                                 
                                 script { //Run Dummy PgSQL
                                     sh '''
                                     echo "Running Postgre image..."
-                                    docker rm -f movie-pgsql || true
-                                    docker run -d --name movie-pgsql --network movie-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                                    docker rm -f ${PREFIX}-pgsql || true
+                                    docker run -d --name ${PREFIX}-pgsql --network ${PREFIX}-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
                                     sleep 8
                                     '''
                                 }
                              
                                 script { //Run Movie API Image
                                     sh '''
-                                    echo "Running $MOVIE_IMAGE..."
-                                    docker rm -f $MOVIE_IMAGE || true
-                                    docker run -d -p 8001:8000 --name $MOVIE_IMAGE --network movie-net -e DATABASE_URI=postgresql://db_user:db_pass@movie-pgsql/test-db $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
+                                    echo "Running $IMAGE_NAME..."
+                                    docker rm -f $IMAGE_NAME || true
+                                    docker run -d -p 8001:8000 --name $IMAGE_NAME --network ${PREFIX}-net -e DATABASE_URI=postgresql://db_user:db_pass@${PREFIX}-pgsql/test-db $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     sleep 5
                                     '''
                                 }
 
                                 script { //Test Movie API Image
                                     sh '''
-                                    echo "Testing $MOVIE_IMAGE..."
-                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8001/api/v1/movies/docs"
+                                    echo "Testing $IMAGE_NAME..."
+                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8001/api/v1/${PREFIX}s/docs"
                                     sleep 3
                                     ''' 
                                 }
@@ -71,8 +84,8 @@ pipeline {
                                 script { //Stop containers
                                     sh '''
                                     echo "Stopping containers..."
-                                    docker stop $MOVIE_IMAGE
-                                    docker stop movie-pgsql
+                                    docker stop $IMAGE_NAME
+                                    docker stop ${PREFIX}-pgsql
                                     sleep 3
                                     '''
                                 }
@@ -83,10 +96,10 @@ pipeline {
                             steps{
                                 script { //Push Movie API Image to Registry
                                     sh '''
-                                    echo "Pushing $MOVIE_IMAGE image..."
-                                    docker tag $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$MOVIE_IMAGE:latest
+                                    echo "Pushing $IMAGE_NAME image..."
+                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin                                    
-                                    docker push $REGISTRY_NAME/$MOVIE_IMAGE:$DOCKER_TAG
+                                    docker push $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     '''
                                 }
                             }
@@ -95,8 +108,13 @@ pipeline {
                 }
 
                 stage('Cast image') {
-                    when { // run this stage only if there are changes in the cast-service directory
-                        changeset "**/cast-service/**"
+                    // when { // run this stage only if there are changes in the cast-service directory
+                    //     changeset "**/cast-service/**"
+                    // }
+                    environment{
+                        IMAGE_NAME = $CAST_IMAGE
+                        SVC_NAME = $CAST_SVC_NAME
+                        PREFIX = $CAST_PREFIX
                     }
                     stages{
                         
@@ -104,8 +122,8 @@ pipeline {
                             steps{    
                                 script { //Build Cast API Image
                                     sh '''
-                                    echo "Building $CAST_IMAGE image..."
-                                    docker build -t $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG ./cast-service
+                                    echo "Building $IMAGE_NAME image..."
+                                    docker build -t $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG ./$SVC_NAME
                                     sleep 3
                                     '''
                                 }
@@ -117,9 +135,9 @@ pipeline {
 
                                 script { //Docker Network for Movie and PgSQL communication
                                     sh '''
-                                    echo "Creating Docker Network cast-net..."
-                                    docker network rm cast-net || true
-                                    docker network create cast-net
+                                    echo "Creating Docker Network ${PREFIX}-net..."
+                                    docker network rm ${PREFIX}-net || true
+                                    docker network create ${PREFIX}-net
                                     '''
                                 }
                                 
@@ -127,25 +145,25 @@ pipeline {
                                 script { //Run Dummy PgSQL
                                     sh '''
                                     echo "Running Postgre image..."
-                                    docker rm -f cast-pgsql || true
-                                    docker run -d --name cast-pgsql --network cast-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
+                                    docker rm -f ${PREFIX}-pgsql || true
+                                    docker run -d --name ${PREFIX}-pgsql --network ${PREFIX}-net -e POSTGRES_USER=db_user -e POSTGRES_PASSWORD=db_pass -e POSTGRES_DB=test-db postgres:12.1-alpine
                                     sleep 8
                                     '''
                                 }
                              
                                 script { //Run Movie API Image
                                     sh '''
-                                    echo "Running $CAST_IMAGE..."
-                                    docker rm -f $CAST_IMAGE || true
-                                    docker run -d -p 8002:8000 --name $CAST_IMAGE --network cast-net -e DATABASE_URI=postgresql://db_user:db_pass@cast-pgsql/test-db $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                                    echo "Running $IMAGE_NAME..."
+                                    docker rm -f $IMAGE_NAME || true
+                                    docker run -d -p 8002:8000 --name $IMAGE_NAME --network ${PREFIX}-net -e DATABASE_URI=postgresql://db_user:db_pass@${PREFIX}-pgsql/test-db $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     sleep 5
                                     '''
                                 }
 
                                 script { //Test Movie API Image
                                     sh '''
-                                    echo "Testing $CAST_IMAGE..."
-                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/api/v1/casts/docs"
+                                    echo "Testing $IMAGE_NAME..."
+                                    curl -sf -o /dev/null -w "\nHTTP Code : %{http_code}\n" -X GET "http://localhost:8002/api/v1/${PREFIX}s/docs"
                                     sleep 3
                                     ''' 
                                 }
@@ -153,8 +171,8 @@ pipeline {
                                 script { //Stop containers
                                     sh '''
                                     echo "Stopping containers..."
-                                    docker stop $CAST_IMAGE
-                                    docker stop cast-pgsql
+                                    docker stop $IMAGE_NAME
+                                    docker stop ${PREFIX}-pgsql
                                     sleep 3
                                     '''
                                 }
@@ -163,13 +181,12 @@ pipeline {
                     
                         stage('Pushing cast-api image'){
                             steps{
-                                
                                 script { //Push Movie API Image to Registry
                                     sh '''
-                                    echo "Pushing ${CAST_IMAGE} image..."
+                                    echo "Pushing $IMAGE_NAME image..."
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG $REGISTRY_NAME/$CAST_IMAGE:latest
-                                    docker push $REGISTRY_NAME/$CAST_IMAGE:$DOCKER_TAG
+                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
+                                    docker push $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG
                                     '''
                                 }
                             }
@@ -179,19 +196,20 @@ pipeline {
             }
         }
         // DEPLOYMENT STAGES ------------------------------------------------------------------------
-        stage('Helm Deployment'){
+        stage('Deployment'){
             environment{
                 KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
                 SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PSW
                 
-                MOVIE_DB_SVC_NAME = "movie-db"
-                CAST_DB_SVC_NAME = "cast-db"
-                CAST_SVC_NAME = "cast-service"
+                MOVIE_DB_SVC = "${MOVIE_PREFIX}-db"
+                CAST_DB_SVC = "${CAST_PREFIX}-db"
+                // CAST_SVC_NAME = "cast-service"
 
-                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${MOVIE_DB_SVC_NAME}/movie_db"
-                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${CAST_DB_SVC_NAME}/cast_db"
+                MOVIE_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${MOVIE_DB_SVC}/${MOVIE_PREFIX}_db"
+                CAST_DB_URI = "postgresql://${SQL_CREDS_USR}:${SQL_CREDS_PSW}@${CAST_DB_SVC}/${CAST_PREFIX}_db"
             }
-            stages { // remplace by parallel if you want to deploy envs in parallel
+
+            stages { // replace by parallel if you want to deploy envs in parallel
                 
                 // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
                 // In a real world scenario with multiple agents, we should import kubeconfig in each stage
@@ -218,30 +236,34 @@ pipeline {
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
                             // }
+                            environment{
+                                PREFIX = $MOVIE_PREFIX
+                            }
                             steps {
-
-                                // script { // install or refresh kubeconfig file
-                                //     sh '''
-                                //     rm -Rf .kube
-                                //     mkdir .kube
-                                //     cat $KUBECONFIG > .kube/config
-                                //     '''
-                                // }
                      
                                 script { // Deploy movie-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
-                                    helm upgrade --install movie-db ./helm/pgsql/ \
-                                    --values=./helm/pgsql/values-movie.yaml \
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
                                     --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
                                     --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
                                     '''
                                 }
-
+                            }
+                        }
+                        stage('Deploy cast-db'){
+                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                            //     changeset "**/helm/pgsql/**"
+                            // }
+                            environment{
+                                PREFIX = $CAST_PREFIX
+                            }
+                            steps {
                                 script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
                                     sh '''
-                                    helm upgrade --install cast-db ./helm/pgsql/ \
-                                    --values=./helm/pgsql/values-cast.yaml \
+                                    helm upgrade --install ${PREFIX}-db ./helm/pgsql/ \
+                                    --values=./helm/pgsql/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
                                     --set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR \
                                     --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW
@@ -254,22 +276,18 @@ pipeline {
                             // when { // update deployment only if there are changes in the movie-service directory
                             //     changeset "**/movie-service/**"
                             // }
+                            environment{
+                                PREFIX = $MOVIE_PREFIX
+                                DB_URI = $MOVIE_DB_URI
+                            }
                             steps {
-
-                                // script { // install or refresh kubeconfig file
-                                //     sh '''
-                                //     rm -Rf .kube
-                                //     mkdir .kube
-                                //     cat $KUBECONFIG > .kube/config
-                                //     '''
-                                // }
 
                                 script { // Deploy movie-api (FastAPI) with Helm
                                     sh '''
-                                    helm upgrade --install movie-api ./helm/fastapi/ \
-                                    --values=./helm/fastapi/values-movie.yaml \
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set secret.stringData.DATABASE_URI=$MOVIE_DB_URI \
+                                    --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
                                 }
@@ -280,13 +298,17 @@ pipeline {
                             // when { // update deployment only if there are changes in the cast-service directory
                             //     changeset "**/cast-service/**"
                             // }
+                            environment{
+                                PREFIX = $MOVIE_PREFIX
+                                DB_URI = $MOVIE_DB_URI
+                            }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
                                     sh '''
-                                    helm upgrade --install cast-api ./helm/fastapi/ \
-                                    --values=./helm/fastapi/values-cast.yaml \
+                                    helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
+                                    --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
-                                    --set secret.stringData.DATABASE_URI=$CAST_DB_URI
+                                    --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
                             }
@@ -335,7 +357,7 @@ pipeline {
         //             cat $KUBECONFIG > .kube/config
         //             cp fastapi/values.yaml values.yml
         //             cat values.yml
-        //             sed -i "s+tag.*+tag: ${DOCKER_TAG}+g" values.yml
+        //             sed -i "s+tag.*+tag: ${IMAGE_TAG}+g" values.yml
         //             helm upgrade --install app fastapi --values=values.yml --namespace prod
         //             '''
         //         }
