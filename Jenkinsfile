@@ -99,7 +99,7 @@ pipeline {
                                 script { //Push Movie API Image to Registry
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
-                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
+                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin                                    
                                     docker push $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     '''
@@ -187,7 +187,7 @@ pipeline {
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
+                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
                                     docker push $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG
                                     '''
                                 }
@@ -303,6 +303,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -324,6 +325,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -433,6 +435,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -454,6 +457,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -563,6 +567,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -584,6 +589,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -592,6 +598,12 @@ pipeline {
                         
                         stage('Deploy web-frontend'){
                             steps {
+                                when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                    anyOf {
+                                        changeset "**/helm/nginx/**"
+                                        changeset "**/nginx/**"
+                                    }
+                                }
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
@@ -697,6 +709,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -718,6 +731,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag $IMAGE_TAG \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
