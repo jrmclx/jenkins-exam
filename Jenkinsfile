@@ -13,9 +13,10 @@ pipeline {
         CAST_SVC_NAME = "${CAST_PREFIX}-service"
 
         IMAGE_TAG = "v${BUILD_ID}.0" // we will tag our images with the current build in order to increment the value by 1 with each new build
-
     }
+
     agent any // any available agent
+    
     stages {
         stage('Parallel Image Preparation'){ // Build, Run, Test and Push images in parallel
             environment{
@@ -197,34 +198,10 @@ pipeline {
             }
         }
 
-        // As we have a single agent for this exercise, we can trigger a unique kubeconfig import for all subsequent stages
-        // In a real world scenario with multiple agents, we should import kubeconfig in each stage
-        stage('Import Kubeconfig'){ 
-            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-            //     anyOf {
-            //         changeset "**/helm/**"
-            //         changeset "**/nginx/**"
-            //         changeset "**/movie-service/**"
-            //         changeset "**/cast-service/**"
-            //     }
-            // }
-            environment{
-                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
-            }
-            steps {
-                script { // install or refresh kubeconfig file
-                    sh '''
-                    rm -Rf .kube
-                    mkdir .kube
-                    cat $KUBECONFIG > .kube/config
-                    '''
-                }
-            }
-        }
-
         // DEPLOYMENT STAGES ------------------------------------------------------------------------
         stage('Deployment'){
             environment{
+                KUBECONFIG = credentials("kubeconfig") // we retrieve kubeconfig from Jenkins secret file
                 SQL_CREDS = credentials("pgsql-admin-creds") // this generates also SQL_CREDS_USR & SQL_CREDS_PSW
                 
                 MOVIE_DB_SVC = "${MOVIE_PREFIX}-db"
@@ -246,7 +223,26 @@ pipeline {
                         NAMESPACE = "dev"
                         NODEPORT = "$NODEPORT_DEV"
                     }
+                    when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                        anyOf {
+                            changeset "**/nginx/**"
+                            changeset "**/movie-service/**"
+                            changeset "**/cast-service/**"
+                        }
+                    }
                     stages {
+
+                        stage('Import Kubeconfig'){ 
+                            steps {
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+                            }
+                        }
 
                         stage('Deploy movie-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
@@ -363,6 +359,18 @@ pipeline {
                     }
                     stages {
 
+                        stage('Import Kubeconfig'){ 
+                            steps {
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+                            }
+                        }
+
                         stage('Deploy movie-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
@@ -478,6 +486,18 @@ pipeline {
                     }
                     stages {
 
+                        stage('Import Kubeconfig'){ 
+                            steps {
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+                            }
+                        }
+
                         stage('Deploy movie-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
@@ -561,12 +581,6 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
                             steps {
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
@@ -592,6 +606,18 @@ pipeline {
                         NODEPORT = "$NODEPORT_PROD"
                     }
                     stages {
+
+                        stage('Import Kubeconfig'){ 
+                            steps {
+                                script { // install or refresh kubeconfig file
+                                    sh '''
+                                    rm -Rf .kube
+                                    mkdir .kube
+                                    cat $KUBECONFIG > .kube/config
+                                    '''
+                                }
+                            }
+                        }
 
                         stage('Approval to deploy prod'){
                             steps {
