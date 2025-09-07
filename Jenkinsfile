@@ -212,7 +212,7 @@ pipeline {
                     }
                 }
                 stage('Deploy Movie DB') {
-                    when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                    // when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
                     steps {
                         script {
                             helmDeploy(
@@ -223,7 +223,7 @@ pipeline {
                     }
                 }
                 stage('Deploy Cast DB') {
-                    when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                    // when { changeset "**/helm/pgsql/**" } // update statefulsets only if there are changes in PgSQL Helm Chart directory
                     steps {
                         script {
                             helmDeploy(
@@ -234,7 +234,7 @@ pipeline {
                     }
                 }
                 stage('Deploy Movie API') {
-                    when { changeset "**/movie-service/**" } // update deployment only if there are changes in the movie-service directory
+                    // when { changeset "**/movie-service/**" } // update deployment only if there are changes in the movie-service directory
                     steps {
                         script {
                             helmDeploy(
@@ -245,7 +245,7 @@ pipeline {
                     }
                 }
                 stage('Deploy Cast API') {
-                    when { changeset "**/cast-service/**" } // update deployment only if there are changes in the cast-service directory
+                    // when { changeset "**/cast-service/**" } // update deployment only if there are changes in the cast-service directory
                     steps {
                         script {
                             helmDeploy(
@@ -256,12 +256,12 @@ pipeline {
                     }
                 }
                 stage('Deploy web-frontend'){
-                    when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                        anyOf {
-                            changeset "**/helm/nginx/**"
-                            changeset "**/nginx/**"
-                        }
-                    }
+                    // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                    //     anyOf {
+                    //         changeset "**/helm/nginx/**"
+                    //         changeset "**/nginx/**"
+                    //     }
+                    // }
                     steps {
                         script { // Update configMaps storing Nginx conf and index files
                                 sh '''
