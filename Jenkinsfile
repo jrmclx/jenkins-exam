@@ -24,9 +24,9 @@ pipeline {
             }
             parallel {
                 stage('Movie image') {
-                    // when { // run this stage only if there are changes in the movie-service directory
-                    //     changeset "**/movie-service/**"
-                    // }
+                    when { // run this stage only if there are changes in the movie-service directory
+                        changeset "**/movie-service/**"
+                    }
                     environment{
                         IMAGE_NAME = "$MOVIE_IMAGE"
                         SVC_NAME = "$MOVIE_SVC_NAME"
@@ -99,7 +99,7 @@ pipeline {
                                 script { //Push Movie API Image to Registry
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
-                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
+                                    docker tag $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin                                    
                                     docker push $REGISTRY_NAME/$IMAGE_NAME:$IMAGE_TAG
                                     '''
@@ -110,9 +110,9 @@ pipeline {
                 }
 
                 stage('Cast image') {
-                    // when { // run this stage only if there are changes in the cast-service directory
-                    //     changeset "**/cast-service/**"
-                    // }
+                    when { // run this stage only if there are changes in the cast-service directory
+                        changeset "**/cast-service/**"
+                    }
                     environment{
                         IMAGE_NAME = "$CAST_IMAGE"
                         SVC_NAME = "$CAST_SVC_NAME"
@@ -187,7 +187,7 @@ pipeline {
                                     sh '''
                                     echo "Pushing $IMAGE_NAME image..."
                                     echo $REGISTRY_PASS | docker login registry.gitlab.com -u $REGISTRY_USER --password-stdin
-                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:IMAGE_TAG
+                                    docker tag $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG $REGISTRY_NAME/$IMAGE_NAME:latest
                                     docker push $REGISTRY_NAME/$CAST_IMAGE:$IMAGE_TAG
                                     '''
                                 }
@@ -216,14 +216,14 @@ pipeline {
                 NODEPORT_PROD = 30000
             }
 
-            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-            //     anyOf {
-            //         changeset "**/nginx/**"
-            //         changeset "**/movie-service/**"
-            //         changeset "**/cast-service/**"
-            //         changeset "**/helm/**"
-            //     }
-            // }
+            when { // update deployment only if there are changes in the Helm Charts or App source code
+                anyOf {
+                    changeset "**/nginx/**"
+                    changeset "**/movie-service/**"
+                    changeset "**/cast-service/**"
+                    changeset "**/helm/**"
+                }
+            }
 
             parallel { // replace by 'stages' if you want a sequential deployment
                 
@@ -248,9 +248,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -269,9 +269,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -289,9 +289,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -303,6 +303,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -311,9 +312,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -324,6 +325,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -331,19 +333,21 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
@@ -378,9 +382,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -399,9 +403,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -419,9 +423,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -433,6 +437,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -441,9 +446,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -454,6 +459,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -461,19 +467,21 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
@@ -508,9 +516,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -529,9 +537,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -549,9 +557,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -563,6 +571,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -571,9 +580,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -584,6 +593,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -591,7 +601,14 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
@@ -643,9 +660,9 @@ pipeline {
                         }
                         
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -663,9 +680,9 @@ pipeline {
                             }
                         }
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -683,9 +700,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -697,6 +714,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI \
                                     --set secret.stringData.CAST_SERVICE_HOST_URL="http://$CAST_SVC_NAME/api/v1/casts/"
                                     '''
@@ -705,9 +723,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -718,6 +736,7 @@ pipeline {
                                     helm upgrade --install ${PREFIX}-api ./helm/fastapi/ \
                                     --values=./helm/fastapi/values-${PREFIX}.yaml \
                                     --namespace $NAMESPACE --create-namespace \
+                                    --set image.tag="$IMAGE_TAG" \
                                     --set secret.stringData.DATABASE_URI=$DB_URI
                                     '''
                                 }
@@ -725,19 +744,21 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
+
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
                                     kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n $NAMESPACE
                                     '''
                                 }
+
                                 script { // Deploy web frontend (Nginx) with Helm
                                     sh '''
                                     helm upgrade --install web-frontend ./helm/nginx/ \
