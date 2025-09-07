@@ -18,6 +18,15 @@ pipeline {
     agent any // any available agent
 
     stages {
+
+
+        stage('Debug Branch') {
+            steps {
+                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
+                echo "GIT_BRANCH  = ${env.GIT_BRANCH}"
+            }
+        }
+
         stage('Parallel Image Preparation'){ // Build, Run, Test and Push images in parallel
             environment{
                 REGISTRY_PASS = credentials("registry-token") // we retrieve registry token from Jenkins secret text
@@ -632,19 +641,12 @@ pipeline {
                     environment{
                         NAMESPACE = "prod"
                         NODEPORT = "$NODEPORT_PROD"
-                    // }
+                    }
                     // when { // deploy to production only if there are changes in Master branch
                     //     branch pattern: ".*(master|main)", comparator: "REGEXP"
                     // }
 
                     stages {
-
-                        stage('Debug Branch') {
-                            steps {
-                                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
-                                echo "GIT_BRANCH  = ${env.GIT_BRANCH}"
-                            }
-                        }
 
                         stage('Import Kubeconfig'){ 
                             steps {
