@@ -195,12 +195,12 @@ pipeline {
             stages {
                 stage("Non-Prod Environments") {
                     when { expression { env.GIT_BRANCH ==~ /.*(develop|dev|qa|release).*$/ } }
-                    steps {
-                        script  {
+                    stages {
+                        
                             deployEnvironment("dev", env.IMAGE_TAG, 30001)()
                             deployEnvironment("qa", env.IMAGE_TAG, 30002)()
                             deployEnvironment("staging", env.IMAGE_TAG, 30003)()
-                        }
+                      
                     }
                 }
                  
