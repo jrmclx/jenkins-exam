@@ -24,9 +24,9 @@ pipeline {
             }
             parallel {
                 stage('Movie image') {
-                    // when { // run this stage only if there are changes in the movie-service directory
-                    //     changeset "**/movie-service/**"
-                    // }
+                    when { // run this stage only if there are changes in the movie-service directory
+                        changeset "**/movie-service/**"
+                    }
                     environment{
                         IMAGE_NAME = "$MOVIE_IMAGE"
                         SVC_NAME = "$MOVIE_SVC_NAME"
@@ -110,9 +110,9 @@ pipeline {
                 }
 
                 stage('Cast image') {
-                    // when { // run this stage only if there are changes in the cast-service directory
-                    //     changeset "**/cast-service/**"
-                    // }
+                    when { // run this stage only if there are changes in the cast-service directory
+                        changeset "**/cast-service/**"
+                    }
                     environment{
                         IMAGE_NAME = "$CAST_IMAGE"
                         SVC_NAME = "$CAST_SVC_NAME"
@@ -216,14 +216,14 @@ pipeline {
                 NODEPORT_PROD = 30000
             }
 
-            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-            //     anyOf {
-            //         changeset "**/nginx/**"
-            //         changeset "**/movie-service/**"
-            //         changeset "**/cast-service/**"
-            //         changeset "**/helm/**"
-            //     }
-            // }
+            when { // update deployment only if there are changes in the Helm Charts or App source code
+                anyOf {
+                    changeset "**/nginx/**"
+                    changeset "**/movie-service/**"
+                    changeset "**/cast-service/**"
+                    changeset "**/helm/**"
+                }
+            }
 
             parallel { // replace by 'stages' if you want a sequential deployment
                 
@@ -248,9 +248,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -269,9 +269,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -289,9 +289,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -311,9 +311,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -331,12 +331,12 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
@@ -378,9 +378,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -399,9 +399,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -419,9 +419,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -441,9 +441,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -461,12 +461,12 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
@@ -508,9 +508,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -529,9 +529,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -549,9 +549,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -571,9 +571,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -643,9 +643,9 @@ pipeline {
                         }
                         
                         stage('Deploy movie-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                             }
@@ -663,9 +663,9 @@ pipeline {
                             }
                         }
                         stage('Deploy cast-db'){
-                            // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
-                            //     changeset "**/helm/pgsql/**"
-                            // }
+                            when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
+                                changeset "**/helm/pgsql/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                             }
@@ -683,9 +683,9 @@ pipeline {
                         }
 
                         stage('Deploy movie-api'){
-                            // when { // update deployment only if there are changes in the movie-service directory
-                            //     changeset "**/movie-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the movie-service directory
+                                changeset "**/movie-service/**"
+                            }
                             environment{
                                 PREFIX = "$MOVIE_PREFIX"
                                 DB_URI = "$MOVIE_DB_URI"
@@ -705,9 +705,9 @@ pipeline {
                         }
 
                         stage('Deploy cast-api'){
-                            // when { // update deployment only if there are changes in the cast-service directory
-                            //     changeset "**/cast-service/**"
-                            // }
+                            when { // update deployment only if there are changes in the cast-service directory
+                                changeset "**/cast-service/**"
+                            }
                             environment{
                                 PREFIX = "$CAST_PREFIX"
                                 DB_URI = "$CAST_DB_URI"
@@ -725,12 +725,12 @@ pipeline {
                         }
                         
                         stage('Deploy web-frontend'){
-                            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                            //     anyOf {
-                            //         changeset "**/helm/nginx/**"
-                            //         changeset "**/nginx/**"
-                            //     }
-                            // }
+                            when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+                                anyOf {
+                                    changeset "**/helm/nginx/**"
+                                    changeset "**/nginx/**"
+                                }
+                            }
                             steps {
                                 script { // Update configMaps storing Nginx conf and index files
                                     sh '''
