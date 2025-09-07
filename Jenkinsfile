@@ -16,7 +16,7 @@ pipeline {
     }
 
     agent any // any available agent
-    
+
     stages {
         stage('Parallel Image Preparation'){ // Build, Run, Test and Push images in parallel
             environment{
@@ -216,20 +216,23 @@ pipeline {
                 NODEPORT_PROD = 30000
             }
 
-            parallel { // replace by stages if you want a sequential deployment
+            // when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
+            //     anyOf {
+            //         changeset "**/nginx/**"
+            //         changeset "**/movie-service/**"
+            //         changeset "**/cast-service/**"
+            //         changeset "**/helm/**"
+            //     }
+            // }
+
+            parallel { // replace by 'stages' if you want a sequential deployment
                 
                 stage('Deploy dev'){
                     environment{
                         NAMESPACE = "dev"
                         NODEPORT = "$NODEPORT_DEV"
                     }
-                    when { // update deployment only if there are changes in the Nginx Helm Chart or Nginx conf directory
-                        anyOf {
-                            changeset "**/nginx/**"
-                            changeset "**/movie-service/**"
-                            changeset "**/cast-service/**"
-                        }
-                    }
+
                     stages {
 
                         stage('Import Kubeconfig'){ 
@@ -264,6 +267,7 @@ pipeline {
                                 }
                             }
                         }
+
                         stage('Deploy cast-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
@@ -352,11 +356,13 @@ pipeline {
                         }
                     }
                 }
+
                 stage('Deploy qa'){
                     environment{
                         NAMESPACE = "qa"
                         NODEPORT = "$NODEPORT_QA"
                     }
+                    
                     stages {
 
                         stage('Import Kubeconfig'){ 
@@ -391,6 +397,7 @@ pipeline {
                                 }
                             }
                         }
+
                         stage('Deploy cast-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
@@ -479,11 +486,13 @@ pipeline {
                         }
                     }
                 }
+
                 stage('Deploy stg'){
                     environment{
                         NAMESPACE = "staging"
                         NODEPORT = "$NODEPORT_STG"
                     }
+
                     stages {
 
                         stage('Import Kubeconfig'){ 
@@ -518,6 +527,7 @@ pipeline {
                                 }
                             }
                         }
+
                         stage('Deploy cast-db'){
                             // when { // update statefulsets only if there are changes in PgSQL Helm Chart directory
                             //     changeset "**/helm/pgsql/**"
@@ -600,11 +610,16 @@ pipeline {
                         }
                     }
                 }
+
                 stage('Deploy prod'){
                     environment{
                         NAMESPACE = "prod"
                         NODEPORT = "$NODEPORT_PROD"
                     }
+                    when { // deploy to production only if there are changes in Master branch
+                        branch 'master'
+                    }
+
                     stages {
 
                         stage('Import Kubeconfig'){ 
