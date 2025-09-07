@@ -1,0 +1,76 @@
+# -----------------------
+#  CAST PostgreSQL Secrets
+# -----------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cast-pg-secret
+  namespace: dev
+type: Opaque
+stringData:
+  POSTGRES_USER: cast_db_username
+  POSTGRES_PASSWORD: cast_db_password
+  POSTGRES_DB: cast_db_dev
+---
+
+# -----------------------
+#  CAST Headless Services
+# -----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: cast-db
+  namespace: dev
+  labels:
+    app: cast-pgsql
+spec:
+  clusterIP: None
+  selector:
+    app: cast-pgsql
+  ports:
+  - name: pgsql
+    protocol: TCP
+    port: 5432
+---
+
+# -----------------------
+#  CAST PgSQL StatefulSet
+# -----------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cast-pgsql
+  namespace: dev
+spec:
+  serviceName: cast-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cast-pgsql
+  template:
+    metadata:
+      labels:
+        app: cast-pgsql
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: cast-pgsql
+          image: postgres:12.1-alpine
+          ports:
+          - containerPort: 5432
+          envFrom:
+          - secretRef:
+              name: cast-pg-secret
+          volumeMounts:
+          - name: cast-pg-data
+            mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: cast-pg-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+---

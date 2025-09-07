@@ -1,0 +1,72 @@
+# Movie App --- Kubernetes Manifests
+# ===============================================
+# Ce fichier vise à tester et valider la structure de l'application Movie App portée de Docker à Kubernetes.
+# Il inclut la création d'un namespace dédié, des ConfigMaps et Secrets pour la configuration des services,
+# des Services pour l'exposition des applications, et des Deployments pour la gestion des pods.
+# ===============================================
+
+# -----------------------
+#  Movie NodePort Service
+# -----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-service
+  namespace: dev
+  labels:
+    app: movie-api
+spec:
+  type: NodePort
+  selector:
+    app: movie-api
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8000
+    nodePort: 30001
+---
+
+# -----------------------
+# FastAPI Movie Secret
+# -----------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: movie-config-secret
+  namespace: dev
+stringData:
+  DATABASE_URI: postgresql://movie_db_username:movie_db_password@movie-db/movie_db_dev
+  CAST_SERVICE_HOST_URL: http://cast-service:80/api/v1/casts/
+---
+
+# -----------------------
+# FastAPI Movie Deployment
+# -----------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movie-api
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-api
+  template:
+    metadata:
+      labels:
+        app: movie-api
+    spec:
+      containers:
+      - name: movie-api
+        image: registry.gitlab.com/jrmclx/jenkins-exam/movie-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: movie-config-secret
+      imagePullSecrets:
+      - name: regcred
+---

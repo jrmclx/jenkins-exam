@@ -1,0 +1,76 @@
+# -----------------------
+# MOVIE PostgreSQL Secrets
+# -----------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: movie-pg-secret
+  namespace: dev
+type: Opaque
+stringData:
+  POSTGRES_USER: movie_db_username
+  POSTGRES_PASSWORD: movie_db_password
+  POSTGRES_DB: movie_db_dev
+---
+
+# -----------------------
+#  MOVIE Headless Services
+# -----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: movie-db
+  namespace: dev
+  labels:
+    app: movie-pgsql
+spec:
+  clusterIP: None
+  selector:
+    app: movie-pgsql
+  ports:
+  - name: pgsql
+    protocol: TCP
+    port: 5432
+---
+
+# -----------------------
+#  MOVIE PgSQL StatefulSet
+# -----------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: movie-pgsql
+  namespace: dev
+spec:
+  serviceName: movie-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-pgsql
+  template:
+    metadata:
+      labels:
+        app: movie-pgsql
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: movie-pgsql
+          image: postgres:12.1-alpine
+          ports:
+          - containerPort: 5432
+          envFrom:
+          - secretRef:
+              name: movie-pg-secret
+          volumeMounts:
+          - name: movie-pg-data
+            mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: movie-pg-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+---

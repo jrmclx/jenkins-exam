@@ -1,0 +1,32 @@
+# Default values for nginx.
+
+app:
+  name: web
+
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  name: nginx-service
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30000
+
+# Create ConfigMaps from local files and apply to the cluster before running helm install/upgrade
+  # kubectl create configmap nginx-conf --from-file=default.conf=nginx/nginx_config.conf --dry-run=client -o yaml | kubectl apply -f - -n dev
+  # kubectl create configmap nginx-index --from-file=nginx/index.html --dry-run=client -o yaml | kubectl apply -f - -n dev
+
+configmaps:
+  - name: nginx-conf
+    items:
+      - key: default.conf
+        mountPath: /etc/nginx/conf.d/default.conf
+  - name: nginx-index
+    items:
+      - key: index.html
+        mountPath: /usr/share/nginx/html/index.html

@@ -1,0 +1,27 @@
+# # Default values for postgresql.
+
+# app:
+#   name: postgresql
+
+# replicaCount: 1
+
+# image:
+#   repository: postgres
+#   tag: "12.1-alpine"
+#   pullPolicy: Always
+  
+# service:
+#   name: pg-db
+#   port: 5432
+  
+# secret:
+#   stringData:
+#     POSTGRES_USER: db_username
+#     POSTGRES_PASSWORD: db_password
+#     POSTGRES_DB: pg_db
+
+# pvc:
+#   - name: pg-data
+#     mountPath: /var/lib/postgresql/data
+#     accessModes: ReadWriteOnce
+#     storage: 1Gi
