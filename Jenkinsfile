@@ -81,7 +81,7 @@ def deployEnvironment(namespace, imageTag, nodeport) {
                         script {
                             helmDeploy(
                                 "movie-db", "./helm/pgsql/", "./helm/pgsql/values-movie.yaml", namespace,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS"
+                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
                             )
                         }
                     }
@@ -93,7 +93,7 @@ def deployEnvironment(namespace, imageTag, nodeport) {
                         script {
                             helmDeploy(
                                 "cast-db", "./helm/pgsql/", "./helm/pgsql/values-cast.yaml", namespace,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS"
+                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
                             )
                         }
                     }
@@ -105,7 +105,7 @@ def deployEnvironment(namespace, imageTag, nodeport) {
                         script {
                             helmDeploy(
                                 "${MOVIE_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", namespace,
-                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PWS@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
+                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
                             )
                         }
                     }
@@ -117,7 +117,7 @@ def deployEnvironment(namespace, imageTag, nodeport) {
                         script {
                             helmDeploy(
                                 "${CAST_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", namespace,
-                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PWS@${CAST_SVC_NAME}/cast_db"
+                                "--set image.tag=${imageTag} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
                             )
                         }
                     }
@@ -217,7 +217,7 @@ pipeline {
                         script {
                             helmDeploy(
                                 "movie-db", "./helm/pgsql/", "./helm/pgsql/values-movie.yaml", env.NAMESPACE,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS"
+                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
                             )
                         }
                     }
@@ -228,7 +228,7 @@ pipeline {
                         script {
                             helmDeploy(
                                 "cast-db", "./helm/pgsql/", "./helm/pgsql/values-cast.yaml", env.NAMESPACE,
-                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PWS"
+                                "--set secret.stringData.POSTGRES_USER=$SQL_CREDS_USR --set secret.stringData.POSTGRES_PASSWORD=$SQL_CREDS_PSW"
                             )
                         }
                     }
@@ -239,7 +239,7 @@ pipeline {
                         script {
                             helmDeploy(
                                 "${MOVIE_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-movie.yaml", env.NAMESPACE,
-                                "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PWS@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
+                                "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${MOVIE_SVC_NAME}/movie_db --set secret.stringData.CAST_SERVICE_HOST_URL=http://${CAST_SVC_NAME}/api/v1/casts/"
                             )
                         }
                     }
@@ -250,7 +250,7 @@ pipeline {
                         script {
                             helmDeploy(
                                 "${CAST_IMAGE}", "./helm/fastapi/", "./helm/fastapi/values-cast.yaml", env.NAMESPACE,
-                                "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PWS@${CAST_SVC_NAME}/cast_db"
+                                "--set image.tag=${IMAGE_TAG} --set secret.stringData.DATABASE_URI=postgresql://$SQL_CREDS_USR:$SQL_CREDS_PSW@${CAST_SVC_NAME}/cast_db"
                             )
                         }
                     }
