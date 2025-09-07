@@ -30,3 +30,4 @@ configmaps:
     items:
       - key: index.html
         mountPath: /usr/share/nginx/html/index.html
+        
