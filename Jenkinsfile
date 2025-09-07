@@ -26,7 +26,7 @@ pipeline {
         //     }
         // }
 
-        stage('Parallel Image Preparation'){ // Build, Run, Test and Push images in parallel
+        stage('Image Preparation'){ // Build, Run, Test and Push images in parallel
             environment{
                 REGISTRY_PASS = credentials("registry-token") // we retrieve registry token from Jenkins secret text
             }
