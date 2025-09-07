@@ -26,9 +26,9 @@ pipeline {
                     //     changeset "**/movie-service/**"
                     // }
                     environment{
-                        IMAGE_NAME = $MOVIE_IMAGE
-                        SVC_NAME = $MOVIE_SVC_NAME
-                        PREFIX = $MOVIE_PREFIX
+                        IMAGE_NAME = "$MOVIE_IMAGE"
+                        SVC_NAME = "$MOVIE_SVC_NAME"
+                        PREFIX = "$MOVIE_PREFIX"
                     }
                     stages {
                         
@@ -112,9 +112,9 @@ pipeline {
                     //     changeset "**/cast-service/**"
                     // }
                     environment{
-                        IMAGE_NAME = $CAST_IMAGE
-                        SVC_NAME = $CAST_SVC_NAME
-                        PREFIX = $CAST_PREFIX
+                        IMAGE_NAME = "$CAST_IMAGE"
+                        SVC_NAME = "$CAST_SVC_NAME"
+                        PREFIX = "$CAST_PREFIX"
                     }
                     stages{
                         
@@ -237,7 +237,7 @@ pipeline {
                             //     changeset "**/helm/pgsql/**"
                             // }
                             environment{
-                                PREFIX = $MOVIE_PREFIX
+                                PREFIX = "$MOVIE_PREFIX"
                             }
                             steps {
                      
@@ -257,7 +257,7 @@ pipeline {
                             //     changeset "**/helm/pgsql/**"
                             // }
                             environment{
-                                PREFIX = $CAST_PREFIX
+                                PREFIX = "$CAST_PREFIX"
                             }
                             steps {
                                 script { // Deploy cast-db (PostgreSQL) with Helm --- Override user and password values from Jenkins secrets
@@ -277,8 +277,8 @@ pipeline {
                             //     changeset "**/movie-service/**"
                             // }
                             environment{
-                                PREFIX = $MOVIE_PREFIX
-                                DB_URI = $MOVIE_DB_URI
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
                             }
                             steps {
 
@@ -299,8 +299,8 @@ pipeline {
                             //     changeset "**/cast-service/**"
                             // }
                             environment{
-                                PREFIX = $MOVIE_PREFIX
-                                DB_URI = $MOVIE_DB_URI
+                                PREFIX = "$MOVIE_PREFIX"
+                                DB_URI = "$MOVIE_DB_URI"
                             }
                             steps {
                                 script { // Deploy cast-api (FastAPI) with Helm
